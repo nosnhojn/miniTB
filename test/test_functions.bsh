@@ -96,10 +96,10 @@ expect_miniTB_pass() {
   fi
 }
 
-expect_testrunner_fail() {
-  grep "INFO:  \[.*\]\[testrunner\]: Testrunner::FAILED" $1 >/dev/null
+expect_miniTB_fail() {
+  grep "INFO:  \[.*\]\[.*miniTB\]: .*miniTB::FAILED" $1 >/dev/null
   if [ "$?" != "0" ]; then
-    echo PASS not detected from Testrunner in $1
+    echo FAIL not detected from Testrunner in $1
     exit 1;
   fi
 }

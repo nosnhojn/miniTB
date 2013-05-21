@@ -103,11 +103,12 @@
 */
 `define SMOKETEST(_NAME_) \
   begin : _NAME_ \
+    string _testName = `"_NAME_`"; \
     integer local_error_count = logger.get_error_count(); \
     string fileName; \
     int lineNumber; \
 \
-    `INFO($psprintf(`"%s::_NAME_::RUNNING`", name)); \
+    `INFO($psprintf(`"%s::%s::RUNNING`", name, _testName)); \
     logger.setup(); \
     smoketest_reset(); \
     logger.is_running = 1; \
@@ -134,8 +135,8 @@
     logger.is_running = 0; \
     logger.teardown(); \
     if (logger.get_error_count() == local_error_count) \
-      `INFO($psprintf(`"%s::_NAME_::PASSED`", name)); \
+      `INFO($psprintf(`"%s::%s::PASSED`", name, _testName)); \
     else \
-      `INFO($psprintf(`"%s::_NAME_::FAILED`", name)); \
+      `INFO($psprintf(`"%s::%s::FAILED`", name, _testName)); \
     logger.update_exit_status(); \
-  end : _NAME_
+  end

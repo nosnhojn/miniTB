@@ -1,0 +1,15 @@
+source ../test_functions.bsh
+
+setup
+
+# remove and create the unit_test
+build_miniTB.pl -module_name dut
+
+# create the Makefile
+run_miniTB.pl -ius dut_miniTB.f
+
+# build and run svunit with vcsi
+expect_file run.log
+expect_testrunner_pass run.log
+
+exit 0

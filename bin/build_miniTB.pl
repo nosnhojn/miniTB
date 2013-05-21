@@ -124,9 +124,11 @@ sub Main() {
 ##########################################################################
 sub CreateMiniTB() {
   print MINITB "`include \"miniTB_defines.svh\"\n";
+  print MINITB "import miniTB_pkg::*;\n";
   print MINITB "\n";
-  print MINITB "module $uut\_miniTB;\n\n";
-  print MINITB qq|  miniTB_logger logger = new("$uut\_miniTB");\n|;
+  print MINITB "module $uut\_miniTB;\n";
+  print MINITB "  string name = \"$uut\_miniTB\";\n";
+  print MINITB "  miniTB_logger logger;\n";
   print MINITB "\n";
   print MINITB "\n";
   print MINITB "  //===================================\n";
@@ -134,6 +136,14 @@ sub CreateMiniTB() {
   print MINITB "  // smoke testing\n";
   print MINITB "  //===================================\n";
   print MINITB "  $uut uut();\n\n\n";
+  print MINITB "  //===================================\n";
+  print MINITB "  // build (like an initial block that\n";
+  print MINITB "  // executes prior to running any\n";
+  print MINITB "  // tests)\n";
+  print MINITB "  //===================================\n";
+  print MINITB "  function void build();\n";
+  print MINITB "    logger = new(name);\n";
+  print MINITB "  endfunction\n\n\n";
   print MINITB "  //===================================\n";
   print MINITB "  // reset each smoke test\n";
   print MINITB "  //===================================\n";

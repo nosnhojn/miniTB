@@ -1,0 +1,16 @@
+source ../test_functions.bsh
+
+setup
+
+# remove and create the unit_test
+build_miniTB.pl -module_name test
+
+#run_miniTB test_miniTB.f
+
+# generate golden reference files
+golden_miniTB       test
+golden_miniTB_flist test
+
+# verify the output
+verify_file                         test_miniTB.sv.gold test_miniTB.sv
+verify_file                         test_miniTB.f.gold test_miniTB.f

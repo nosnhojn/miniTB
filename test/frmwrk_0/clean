@@ -1,0 +1,3 @@
+rm -rf test_miniTB.sv \
+       test_miniTB.f \
+       *.gold

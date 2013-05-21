@@ -23,37 +23,121 @@
 
 use strict;
 
+##########################################################################
+# PrintHelp(): Prints the script usage.
+##########################################################################
+#
+sub PrintHelp() {
+  print "\n";
+  print "Usage:  run_miniTB.pl [ -help ] <simulator> <file list> ]\n\n";
+  print "Where -help                : prints this help screen\n";
+  print "      <simulator>          : could be '-ius', '-vcs' or '-questa'\n";
+  print "      <file list>          : *.f miniTB file list\n";
+  print "\n";
+}
+
+
+##########################################################################
+# CheckArgs(): Checks the arguments of the program.
+##########################################################################
+
+my $simulator;
+my $FILELIST;
+sub CheckArgs() {
+  my $numargs = $#ARGV+1;
+
+  for my $i (0..$numargs-1) {
+    if ( @ARGV[$i] =~ /-help/ ) {
+      PrintHelp();
+    }
+    elsif ( @ARGV[$i] =~ /-ius/ ) {
+      $simulator = "irun";
+    }
+    elsif ( @ARGV[$i] =~ /-questa/ ) {
+      $simulator = "qverilog";
+    }
+    elsif ( @ARGV[$i] =~ /-vcs/ ) {
+      $simulator = "vcs";
+    }
+    else {
+      $FILELIST = @ARGV[$i];
+    }
+  }
+}
+
+
+##########################################################################
+# ValidArgs(): This checks to see if the arguments provided make sense.
+##########################################################################
+
+sub ValidArgs() {
+  if (not defined $simulator) {
+    print "\nERROR:  The simulator was not specified'\n";
+    PrintHelp();
+    return 1;
+  } elsif (not defined $FILELIST) {
+    print "\nERROR:  No filelist specified'\n";
+    PrintHelp();
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+
+
 ############## VARIABLES ############## 
 
-my $TESTDIR = ".";
+my $TESTDIR;
+my $INCDIR;
+my $ALLPKGS;
+my $TESTRUNNER;
+my $FILELIST;
+my $TESTSUITES;
+my $TESTFILES;
+my $SVUNIT_SIM;
 
-my $INCDIR  = "-incdir $TESTDIR ";
-$INCDIR .= "-incdir $ENV{MINITB_INSTALL}/verilog ";
+sub buildCmdLine() {
+  $TESTDIR = ".";
 
-my $ALLPKGS = "$ENV{MINITB_INSTALL}/verilog/miniTB_pkg.sv";
+  if ($simulator eq "ius") {
+    $INCDIR  = "-incdir $TESTDIR ";
+    $INCDIR .= "-incdir $ENV{MINITB_INSTALL}/verilog ";
+  }
+  else {
+    $INCDIR  = "+incdir+$TESTDIR ";
+    $INCDIR .= "+incdir+$ENV{MINITB_INSTALL}/verilog ";
+  }
 
-my $TESTRUNNER = ".testrunner.sv";
+  $ALLPKGS = "$ENV{MINITB_INSTALL}/verilog/miniTB_pkg.sv";
 
-my $FILELISTS  = "-f *miniTB.f";
+  $TESTRUNNER = ".testrunner.sv";
 
-my $TESTSUITES = ".testsuite.sv";
+  $FILELIST  = "-f *miniTB.f";
 
-my $TESTFILES  = "$FILELISTS ";
-$TESTFILES .= "$TESTSUITES ";
-$TESTFILES .= "$TESTRUNNER ";
+  $TESTSUITES = ".testsuite.sv";
 
-my $SVUNIT_SIM  = "irun ";
-$SVUNIT_SIM .= "$INCDIR ";
-$SVUNIT_SIM .= "$ALLPKGS ";
-$SVUNIT_SIM .= "$TESTFILES ";
-$SVUNIT_SIM .= "-l run.log ";
+  $TESTFILES  = "$FILELIST ";
+  $TESTFILES .= "$TESTSUITES ";
+  $TESTFILES .= "$TESTRUNNER ";
+
+  $SVUNIT_SIM  = "$simulator ";
+  $SVUNIT_SIM .= "$INCDIR ";
+  $SVUNIT_SIM .= "$ALLPKGS ";
+  $SVUNIT_SIM .= "$TESTFILES ";
+  $SVUNIT_SIM .= "-l run.log ";
+}
 
 
 
 ############## COMMANDS ############## 
 
-system("create_testsuite.pl -overwrite -add *miniTB.sv -out .testsuite.sv");
-system("create_testrunner.pl -overwrite -add .testsuite.sv -out testrunner.sv");
-system("mv testrunner.sv .testrunner.sv");
-print "$SVUNIT_SIM\n";
-system("$SVUNIT_SIM");
+CheckArgs();
+if ( ValidArgs() == 0 ) {
+  buildCmdLine();
+  system("create_testsuite.pl -overwrite -add *miniTB.sv -out .testsuite.sv");
+  system("create_testrunner.pl -overwrite -add .testsuite.sv -out testrunner.sv");
+  system("mv testrunner.sv .testrunner.sv");
+  print "$SVUNIT_SIM\n";
+  system("$SVUNIT_SIM");
+}

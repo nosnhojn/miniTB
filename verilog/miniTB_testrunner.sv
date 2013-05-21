@@ -74,7 +74,6 @@ endfunction
     suite - test suite to add to the list of test suites
 */
 function void miniTB_testrunner::add_testsuite(miniTB_testsuite suite);
-  `INFO($psprintf("Registering Test Suite %0s", suite.get_name()));
   list_of_suites.push_back(suite); 
 endfunction
 
@@ -98,11 +97,4 @@ task miniTB_testrunner::report();
     if (list_of_suites[i].get_results() == FAIL)
       success = FAIL;
   end
-
-  `LF;
-
-  if (success == PASS)
-    `INFO("Testrunner::PASSED");
-  else
-    `INFO("Testrunner::FAILED");
 endtask

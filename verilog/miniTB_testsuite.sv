@@ -78,7 +78,6 @@ endfunction
     miniTB - unit test to add to the list of unit tests
 */
 function void miniTB_testsuite::add_logger(miniTB_logger miniTB);
-  `INFO($psprintf("Registering Unit Testcase %s", miniTB.get_name()));
   list_of_miniTBs.push_back(miniTB); 
 endfunction
 
@@ -113,9 +112,6 @@ task miniTB_testsuite::report();
       success = FAIL;
     end
   end
-
-  if (success == PASS) `INFO($psprintf("%0s::PASSED", name));
-  else                 `INFO($psprintf("%0s::FAILED", name));
 endtask
 
 
@@ -124,5 +120,4 @@ endtask
   Main Run Task of the Test Suite
 */
 task miniTB_testsuite::run();
-  `INFO($psprintf("%0s::RUNNING", name));
 endtask

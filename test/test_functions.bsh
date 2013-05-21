@@ -88,10 +88,10 @@ expect_file_does_not_contain() {
   fi
 }
 
-expect_testrunner_pass() {
-  grep "INFO:  \[.*\]\[testrunner\]: Testrunner::PASSED" $1 >/dev/null
+expect_miniTB_pass() {
+  grep "INFO:  \[.*\]\[.*miniTB\]: .*miniTB::PASSED" $1 >/dev/null
   if [ "$?" != "0" ]; then
-    echo PASS not detected from Testrunner in $1
+    echo PASS not detected from miniTB in $1
     exit 1;
   fi
 }

@@ -1,0 +1,20 @@
+=================
+Test descriptions
+=================
+
+----------------------------------------------------------
+Tests for the scripting that generates the svunit framework
+----------------------------------------------------------
+frmwrk_0:                generate a basic unit test for a class
+
+---------------------------------
+Tests for the simulator makefiles
+---------------------------------
+sim_ius_0:                      run the framework for a single class unit test with ius
+sim_questa_0:                   run the framework for a single class unit test with questa
+
+-------------------
+SVUnit base testing
+-------------------
+svunit_base_questa_0:              test the use of the svunit logging macros with questa
+svunit_base_ius_0:                 test the use of the svunit logging macros with ius

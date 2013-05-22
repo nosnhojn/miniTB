@@ -19,19 +19,32 @@
 #
 ################################################################
 
+-------------------------------------
+Running the APB slave MiniTB example:
+-------------------------------------
+
+Step 1) Source the MiniTB setup script for 1-time setup
+
+  For bash users:
+    >cd ../../../ && source Setup.bsh && cd -
+
+  For csh users:
+    >cd ../../../ && source Setup.csh && cd -
+
+Step 2) Run with your simulator of choice
+
+  For Cadence Incisive users:
+    >run_miniTB.pl -ius apb_slave_miniTB.f
+
+  For Mentor Questa users:
+    >run_miniTB.pl -questa apb_slave_miniTB.f
+
+  For Synopsys VCS users:
+    >run_miniTB.pl -vcs apb_slave_miniTB.f
+
+
+-------------------------------------
 Don't forget to read the miniTB/README for instructions on
 how to setup the miniTB test environment and instructions for
 building your own tests.
-
-Run and specify the simulator
------------------------------
-
-With Cadence Incisive...
->run_miniTB.pl -ius apb_slave_miniTB.f
-
-With Mentor Questa...
->run_miniTB.pl -questa apb_slave_miniTB.f
-
-With Synopsys VCS...
->run_miniTB.pl -vcs apb_slave_miniTB.f
 

@@ -85,7 +85,7 @@
 */
 `define SMOKE_TESTS_BEGIN \
   task automatic run(); \
-    `INFO($psprintf("%s::RUNNING", name));
+    `INFO("RUNNING");
 
 
 
@@ -108,7 +108,7 @@
     string fileName; \
     int lineNumber; \
 \
-    `INFO($psprintf(`"%s::%s::RUNNING`", name, _testName)); \
+    `INFO($sformatf(`"%s::RUNNING`", _testName)); \
     logger.setup(); \
     smoketest_reset(); \
     logger.is_running = 1; \
@@ -135,8 +135,8 @@
     logger.is_running = 0; \
     logger.teardown(); \
     if (logger.get_error_count() == local_error_count) \
-      `INFO($psprintf(`"%s::%s::PASSED`", name, _testName)); \
+      `INFO($sformatf(`"%s::PASSED`", _testName)); \
     else \
-      `INFO($psprintf(`"%s::%s::FAILED`", name, _testName)); \
+      `INFO($sformatf(`"%s::FAILED`", _testName)); \
     logger.update_exit_status(); \
   end

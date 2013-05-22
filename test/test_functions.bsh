@@ -117,16 +117,11 @@ expect_passing_example() {
   pushd . >/dev/null
 
   cd $1
-  create_svunit.pl
-
-  # build and run svunit with qverilog
-  make SIMULATOR=$2
+  run_miniTB.pl -`echo $2 | tr '[:upper:]' '[:lower:]'` *_miniTB.f
 
   # check the log output for a PASS from the testrunner
   expect_file run.log
-  expect_testrunner_pass run.log
-
-  make SIMULATOR=$2 clean
+  expect_miniTB_pass run.log
 
   popd >/dev/null
 }

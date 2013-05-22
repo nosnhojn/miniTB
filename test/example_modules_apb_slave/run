@@ -1,0 +1,7 @@
+source ../test_functions.bsh
+
+expect_passing_example $MINITB_INSTALL/examples/modules/apb_slave QUESTA
+#expect_passing_example $MINITB_INSTALL/examples/modules/apb_slave VCS
+expect_passing_example $MINITB_INSTALL/examples/modules/apb_slave IUS
+
+exit 0

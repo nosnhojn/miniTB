@@ -7,9 +7,9 @@ run_miniTB.pl -ius dut_miniTB.f
 
 expect_file run.log
 expect_string "INFO:  .*: Use the INFO macro" run.log
-expect_string "INFO: .*: dut_miniTB::TEST0::PASSED" run.log
+expect_string "INFO: .*: TEST0::PASSED" run.log
 expect_string "ERROR: .*: Use the ERROR macro" run.log
-expect_string "INFO: .*: dut_miniTB::TEST1::FAILED" run.log
+expect_string "INFO: .*: TEST1::FAILED" run.log
 expect_miniTB_fail run.log
 
 exit 0

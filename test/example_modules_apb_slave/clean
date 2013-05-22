@@ -1,0 +1,8 @@
+pushd . >/dev/null 2>&1
+
+cd $MINITB_INSTALL/examples/modules/apb_slave
+rm -f .test*.sv run.log
+rm -rf INCA_libs work
+
+popd >/dev/null 2>&1
+

@@ -34,10 +34,6 @@ from running your first smoke test!
 ***********************************************************
 
 
-NOTE: for instructions on how to get going with miniTB, go to
-      www.agilesoc.com.
-
-
 -----------------------------------------------------------
 Release Notes...
 -----------------------------------------------------------
@@ -97,3 +93,10 @@ to my_module_miniTB.f
 >run_miniTB.pl -vcs my_module_miniTB.f
 
 8) pat self on back
+
+
+----------------------------------------------------------------------
+NOTE: for tips on how to get going with miniTB, go to www.AgileSoC.com
+----------------------------------------------------------------------
+
+

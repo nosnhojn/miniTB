@@ -140,4 +140,5 @@ if ( ValidArgs() == 0 ) {
   system("mv testrunner.sv .testrunner.sv");
   print "$SVUNIT_SIM\n";
   system("$SVUNIT_SIM");
+  system("user_feedback.pl");
 }

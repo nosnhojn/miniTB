@@ -1,6 +1,7 @@
 rm -rf *testsuite.sv \
        *miniTB* \
        work \
-       run.log \
+       run.* \
        .testrunner.sv \
-       .testsuite.sv
+       .testsuite.sv \
+       *.wlf

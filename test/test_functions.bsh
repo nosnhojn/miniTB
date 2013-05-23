@@ -114,6 +114,7 @@ expect_string() {
 
 
 expect_passing_example() {
+  which run_miniTB.pl
   pushd . >/dev/null
 
   cd $1

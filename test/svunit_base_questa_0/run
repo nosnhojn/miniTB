@@ -6,6 +6,7 @@ setup
 run_miniTB.pl -questa dut_miniTB.f
 
 expect_file run.log
+expect_file vsim.wlf
 expect_string "INFO:  .*: Use the INFO macro" run.log
 expect_string "INFO: .*: TEST0::PASSED" run.log
 expect_string "ERROR: .*: Use the ERROR macro" run.log

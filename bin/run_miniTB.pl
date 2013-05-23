@@ -100,7 +100,7 @@ my $SVUNIT_SIM;
 sub buildCmdLine() {
   $TESTDIR = ".";
 
-  if ($simulator eq "ius") {
+  if ($simulator eq "irun") {
     $INCDIR  = "-incdir $TESTDIR ";
     $INCDIR .= "-incdir $ENV{MINITB_INSTALL}/verilog ";
   }
@@ -126,6 +126,28 @@ sub buildCmdLine() {
   $SVUNIT_SIM .= "$ALLPKGS ";
   $SVUNIT_SIM .= "$TESTFILES ";
   $SVUNIT_SIM .= "-l run.log ";
+
+
+  if ($simulator eq "irun") {
+    $SVUNIT_SIM .= "-input run.tcl";
+
+    open(my $fh, ">", "run.tcl") or die "Cannot create run.tcl: $!";
+    print $fh "database -open waves.shm\n";
+    print $fh "run\n";
+    print $fh "database -close waves.shm\n";
+  }
+  elsif ($simulator eq "qverilog") {
+    open(my $fh, ">", "run.tcl") or die "Cannot create run.tcl: $!";
+    $SVUNIT_SIM .= "-R -voptargs=+acc -do run.tcl";
+    print $fh "onerror {quit -f}\n";
+    print $fh "log -r /*\n";
+    print $fh "run -all\n";
+    print $fh "dataset save sim vsim.wlf\n";
+    print $fh "quit -f\n";
+  }
+  elsif ($simulator eq "vcs") {
+    $SVUNIT_SIM .= "+vcs+vcdpluson -debug";
+  }
 }
 
 

@@ -10,6 +10,7 @@ run_miniTB.pl -questa dut_miniTB.f
 
 # build and run svunit with vcsi
 expect_file run.log
+expect_file vsim.wlf
 expect_miniTB_pass run.log
 
 exit 0

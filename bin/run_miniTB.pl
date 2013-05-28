@@ -157,8 +157,8 @@ sub buildCmdLine() {
 CheckArgs();
 if ( ValidArgs() == 0 ) {
   buildCmdLine();
-  system("create_testsuite.pl -overwrite -add *miniTB.sv -out .testsuite.sv");
-  system("create_testrunner.pl -overwrite -add .testsuite.sv -out testrunner.sv");
+  system("mtb_create_testsuite.pl -overwrite -add *miniTB.sv -out .testsuite.sv");
+  system("mtb_create_testrunner.pl -overwrite -add .testsuite.sv -out testrunner.sv");
   system("mv testrunner.sv .testrunner.sv");
   print "$SVUNIT_SIM\n";
   system("$SVUNIT_SIM");

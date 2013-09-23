@@ -1,0 +1,2 @@
+simple_dpram.sv
+simple_dpram_miniTB.sv

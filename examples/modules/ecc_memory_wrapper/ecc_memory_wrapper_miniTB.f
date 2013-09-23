@@ -1,0 +1,2 @@
+ecc_memory_wrapper.sv
+ecc_memory_wrapper_miniTB.sv

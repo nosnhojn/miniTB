@@ -1,0 +1,8 @@
+pushd . >/dev/null 2>&1
+
+cd $MINITB_INSTALL/examples/modules/ahb_slave
+rm -f .test*.sv run.* vsim.wlf
+rm -rf INCA_libs work waves.shm
+
+popd >/dev/null 2>&1
+

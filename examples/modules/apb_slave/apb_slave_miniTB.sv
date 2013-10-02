@@ -135,7 +135,7 @@ module apb_slave_miniTB;
     data = 'hffff_ffff;
 
     mst.write(addr, data);
-    mst.write(addr, 'hff, 0, 0);
+    mst.write(addr, 'hff, 0, 0 /* inactive psel */);
     mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
   `SMOKETEST_END
@@ -155,7 +155,7 @@ module apb_slave_miniTB;
     data = 'h99;
 
     mst.write(addr, data);
-    mst.write(addr, 'hff, 0, 1, 0);
+    mst.write(addr, 'hff, 0, 1, 0 /* inactive pwrite */);
     mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
   `SMOKETEST_END

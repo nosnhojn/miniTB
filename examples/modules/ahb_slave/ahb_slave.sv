@@ -50,19 +50,31 @@ parameter IDLE   = 2'b00,
 
 logic [dataWidth-1:0] mem [memDepth];
 
+logic [addrWidth-1:0] haddr_ap;
+logic                 hwrite_ap;
+logic [1:0]           htrans_ap;
+
 always @(posedge hclk or negedge hresetn) begin
   if (!hresetn) begin
-    hready <= 0;
+    hready    <= 0;
+    htrans_ap <= 0;
+    hwrite_ap <= 0;
+    haddr_ap  <= 0;
   end
 
   else begin
-    if (htrans == IDLE) begin
+    htrans_ap <= htrans;
+    hwrite_ap <= hwrite;
+    haddr_ap  <= haddr;
+
+    if (htrans_ap == IDLE) begin
       hready <= 1;
     end
 
-    else if (htrans == NONSEQ) begin
-      if (hwrite) begin
-        mem[haddr] <= hwdata;
+    else if (htrans_ap == NONSEQ) begin
+//$display("%t - htrans_ap:%0x hwrite_ap:%0x haddr_ap:0x%0x hwdata:0x%0x", $time, htrans_ap, hwrite_ap, haddr_ap, hwdata);
+      if (hwrite_ap) begin
+        mem[haddr_ap] <= hwdata;
         hready <= 1;
       end
     end

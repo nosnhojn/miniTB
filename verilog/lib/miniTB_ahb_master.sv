@@ -49,14 +49,23 @@ logic [dataWidth-1:0] hwdata;
 parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
 
+logic in_addr_phase;
 
+//
+// reset
+//
 function void reset();
   htrans = 0;
   haddr  = 0;
   hwrite = 0;
+  hwdata = 0;
+  in_addr_phase = 0;
 endfunction
 
 
+//
+// idle
+//
 task idle();
   @(negedge hclk);
   htrans <= IDLE;
@@ -69,11 +78,15 @@ endtask
 task write(logic [addrWidth-1:0] addr,
            logic [dataWidth-1:0] data);
   // address phase
-  @(negedge hclk);
+  if (!in_addr_phase) @(negedge hclk);
   haddr <= addr;
   htrans <= NONSEQ;
   hwrite <= 1;
+  in_addr_phase <= 1;
+
+  @(negedge hclk);
   hwdata <= data;
+  in_addr_phase <= 0;
 endtask
 
 endinterface

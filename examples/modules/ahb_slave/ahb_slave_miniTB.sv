@@ -1,6 +1,19 @@
 `include "miniTB_defines.svh"
 `include "miniTB_ahb_master.sv"
 
+`define _NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(N) \
+`SMOKETEST(data_cycle__``N``_of_multiple_back2back_NONSEQ_write_n_to_addr) \
+  fork \
+    begin \
+      for (int i=0; i<N+1; i+=1) begin \
+        mst.write('h99-i, 'hfff-i); \
+      end \
+    end \
+  join_none \
+  at_data_phase(N-1); \
+  `FAIL_UNLESS(slave_data_eq('h99-(N-1), 'hfff-(N-1))); \
+`SMOKETEST_END
+
 import miniTB_pkg::*;
 
 module ahb_slave_miniTB;
@@ -86,6 +99,7 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(hready_eq(0));
     `FAIL_UNLESS(hwrite_eq(0));
     `FAIL_UNLESS(haddr_eq(0));
+    `FAIL_UNLESS(hwdata_eq(0));
   `SMOKETEST_END
 
 
@@ -95,7 +109,7 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(hready_inactive_for_address_phase)
     single_idle_trans();
-    at_address_phase();
+    at_sample_edge(0);
     `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
 
@@ -135,6 +149,41 @@ module ahb_slave_miniTB;
   `SMOKETEST_END
   
 
+  //---------------------------------
+  // Multiple NONSEQ write transfers
+  //---------------------------------
+
+  `SMOKETEST(multiple_NONSEQ_write_n_to_addr)
+    single_nonseq_write('h2, 'h22);
+    at_data_phase();
+    `FAIL_UNLESS(slave_data_eq('h2, 'h22));
+
+    single_nonseq_write('h3, 'h33);
+    at_data_phase();
+    `FAIL_UNLESS(slave_data_eq('h3, 'h33));
+  `SMOKETEST_END
+
+  `SMOKETEST(first_of_multiple_back2back_NONSEQ_write_n_to_addr)
+    fork
+      begin
+        mst.write('h5, 'h55);
+        mst.write('h4, 'h44);
+      end
+    join_none
+ 
+    at_data_phase(); // first
+    `FAIL_UNLESS(slave_data_eq('h5, 'h55));
+  `SMOKETEST_END
+
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(2)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(3)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(4)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(5)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(6)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(7)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(8)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(9)
+  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(10)
 
 
   // Single NONSEQ read transfers
@@ -165,21 +214,31 @@ task single_idle_trans();
 endtask
 
 task single_nonseq_write(logic [31:0] addr,
-                       logic [31:0] data);
+                         logic [31:0] data);
   fork
     begin
       mst.write(addr, data);
-      mst.idle();
     end
   join_none
 endtask
 
 task at_sample_edge(int n);
-  repeat (n) @(posedge clk);
+  repeat (n) begin
+    @(posedge clk);
+    #1;
+  end
 endtask
 
 task at_data_phase(int n=0);
   at_sample_edge(2+n);
+endtask
+
+task next_data_phase();
+  at_sample_edge(1);
+endtask
+
+task next_addr_phase();
+  next_data_phase();
 endtask
 
 task at_address_phase();
@@ -190,6 +249,7 @@ function bit hready_eq(logic l);        return (l === mst.hready);  endfunction
 function bit htrans_eq(logic [1:0] l);  return (l === mst.htrans);  endfunction
 function bit hwrite_eq(logic [1:0] l);  return (l === mst.hwrite);  endfunction
 function bit haddr_eq(logic [7:0] l);   return (l === mst.haddr);   endfunction
+function bit hwdata_eq(logic [31:0] l);   return (l === mst.hwdata);   endfunction
 
 function bit slave_data_eq(logic [31:0] addr,
                            logic [31:0] exp);

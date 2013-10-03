@@ -25,7 +25,6 @@ interface minitb_ahb_master
   dataWidth = 32
 )
 (
-  input hresetn,
   input hclk
 );
 
@@ -33,19 +32,48 @@ interface minitb_ahb_master
 //logic                 hbusreqx;
 //logic                 hlockx;
 //
-//logic                 hready;
+logic                 hready;
 //logic [1:0]           hresp;
 //
-//logic [1:0]           htrans;
-//
-//logic [addrWidth-1:0] haddr;
-//logic                 hwrite;
+logic [1:0]           htrans;
+
+logic [addrWidth-1:0] haddr;
+logic                 hwrite;
 //logic [2:0]           hsize;
 //logic [2:0]           hburst;
 //logic [3:0]           hprot;
 //
-//logic [dataWidth-1:0] hwdata;
+logic [dataWidth-1:0] hwdata;
 //logic [dataWidth-1:0] hrdata;
 
+parameter IDLE   = 2'b00,
+          NONSEQ = 2'b10;
+
+
+function void reset();
+  htrans = 0;
+  haddr  = 0;
+  hwrite = 0;
+endfunction
+
+
+task idle();
+  @(negedge hclk);
+  htrans <= IDLE;
+endtask
+
+
+//
+// write
+//
+task write(logic [addrWidth-1:0] addr,
+           logic [dataWidth-1:0] data);
+  // address phase
+  @(negedge hclk);
+  haddr <= addr;
+  htrans <= NONSEQ;
+  hwrite <= 1;
+  hwdata <= data;
+endtask
 
 endinterface

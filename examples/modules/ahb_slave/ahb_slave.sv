@@ -41,8 +41,8 @@ module ahb_slave
 // input [2:0]                  hsize,
 // input [2:0]                  hburst,
 //
-  input [dataWidth-1:0]        hwdata
-// output logic [dataWidth-1:0] hrdata
+  input [dataWidth-1:0]        hwdata,
+  output logic [dataWidth-1:0] hrdata
 );
 
 parameter IDLE   = 2'b00,
@@ -67,16 +67,21 @@ always @(posedge hclk or negedge hresetn) begin
     hwrite_ap <= hwrite;
     haddr_ap  <= haddr;
 
-    if (htrans_ap == IDLE) begin
-      hready <= 1;
-    end
-
-    else if (htrans_ap == NONSEQ) begin
 //$display("%t - htrans_ap:%0x hwrite_ap:%0x haddr_ap:0x%0x hwdata:0x%0x", $time, htrans_ap, hwrite_ap, haddr_ap, hwdata);
+
+    // hardwired until we have to insert wait states
+    hready <= 1;
+
+    // nonseq writes
+    if (htrans_ap == NONSEQ && hwrite_ap) begin
       if (hwrite_ap) begin
         mem[haddr_ap] <= hwdata;
-        hready <= 1;
       end
+    end
+
+    // nonseq reads
+    if (htrans == NONSEQ && !hwrite) begin
+      hrdata <= 0;
     end
   end
 end

@@ -6,7 +6,7 @@
   fork \
     begin \
       for (int i=0; i<N+1; i+=1) begin \
-        mst.write('h99-i, 'hfff-i); \
+        mst.basic_write('h99-i, 'hfff-i); \
       end \
     end \
   join_none \
@@ -22,6 +22,7 @@ module ahb_slave_miniTB;
 
   logic clk;
   logic rst_n;
+  logic [31:0] rdata;
 
   initial begin
     clk = 1;
@@ -43,7 +44,8 @@ module ahb_slave_miniTB;
     .htrans(mst.htrans),
     .hwrite(mst.hwrite),
     .haddr(mst.haddr),
-    .hwdata(mst.hwdata)
+    .hwdata(mst.hwdata),
+    .hrdata(mst.hrdata)
   );
 
   minitb_ahb_master mst
@@ -125,25 +127,25 @@ module ahb_slave_miniTB;
   //-------------------------------
 
   `SMOKETEST(NONSEQ_write_ready)
-    single_nonseq_write(8'h0, 32'h0);
-    at_data_phase();
+    fork_basic_write(8'h0, 32'h0);
+    at_address_phase();
     `FAIL_UNLESS(hready_eq(1));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_0_to_base)
-    single_nonseq_write(8'h0, 32'h0);
+    fork_basic_write(8'h0, 32'h0);
     at_data_phase();
     `FAIL_UNLESS(slave_data_eq('h0, 'h0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_0_to_n)
-    single_nonseq_write(8'hc, 32'h0);
+    fork_basic_write(8'hc, 32'h0);
     at_data_phase();
     `FAIL_UNLESS(slave_data_eq('hc, 'h0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_n_to_addr)
-    single_nonseq_write(8'hd, 32'h5a5a_5a5a);
+    fork_basic_write(8'hd, 32'h5a5a_5a5a);
     at_data_phase();
     `FAIL_UNLESS(slave_data_eq('hd, 'h5a5a_5a5a));
   `SMOKETEST_END
@@ -154,11 +156,11 @@ module ahb_slave_miniTB;
   //---------------------------------
 
   `SMOKETEST(multiple_NONSEQ_write_n_to_addr)
-    single_nonseq_write('h2, 'h22);
+    fork_basic_write('h2, 'h22);
     at_data_phase();
     `FAIL_UNLESS(slave_data_eq('h2, 'h22));
 
-    single_nonseq_write('h3, 'h33);
+    fork_basic_write('h3, 'h33);
     at_data_phase();
     `FAIL_UNLESS(slave_data_eq('h3, 'h33));
   `SMOKETEST_END
@@ -166,8 +168,8 @@ module ahb_slave_miniTB;
   `SMOKETEST(first_of_multiple_back2back_NONSEQ_write_n_to_addr)
     fork
       begin
-        mst.write('h5, 'h55);
-        mst.write('h4, 'h44);
+        mst.basic_write('h5, 'h55);
+        mst.basic_write('h4, 'h44);
       end
     join_none
  
@@ -175,6 +177,7 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(slave_data_eq('h5, 'h55));
   `SMOKETEST_END
 
+  /* maybe a little overkill here but I'm fine with it */
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(2)
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(3)
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(4)
@@ -186,8 +189,31 @@ module ahb_slave_miniTB;
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(10)
 
 
+  //------------------------------
   // Single NONSEQ read transfers
+  //------------------------------
 
+  `SMOKETEST(NONSEQ_read_ready)
+    basic_read(8'h0, rdata);
+    `FAIL_UNLESS(hready_eq(1));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_read_0_from_base)
+    basic_read(8'h0, rdata);
+    `FAIL_UNLESS(rdata === 'h0);
+  `SMOKETEST_END
+ 
+// `SMOKETEST(NONSEQ_write_0_to_n)
+//   single_nonseq_write(8'hc, 32'h0);
+//   at_data_phase();
+//   `FAIL_UNLESS(slave_data_eq('hc, 'h0));
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_write_n_to_addr)
+//   single_nonseq_write(8'hd, 32'h5a5a_5a5a);
+//   at_data_phase();
+//   `FAIL_UNLESS(slave_data_eq('hd, 'h5a5a_5a5a));
+// `SMOKETEST_END
 
 
   // Single NONSEQ write w/wait states
@@ -213,13 +239,18 @@ task single_idle_trans();
   join_none
 endtask
 
-task single_nonseq_write(logic [31:0] addr,
-                         logic [31:0] data);
+task fork_basic_write(logic [31:0] addr,
+                       logic [31:0] data);
   fork
     begin
-      mst.write(addr, data);
+      mst.basic_write(addr, data);
     end
   join_none
+endtask
+
+task automatic basic_read(logic [31:0] addr,
+                          ref logic [31:0] data);
+  mst.basic_read(addr, data);
 endtask
 
 task at_sample_edge(int n);

@@ -84,6 +84,10 @@ always @(posedge hclk or negedge hresetn) begin
     if (htrans == NONSEQ && !hwrite) begin
       hrdata <= mem[haddr];
     end
+
+    else begin
+      hrdata <= 0;
+    end
   end
 end
 

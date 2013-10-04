@@ -203,13 +203,6 @@ module ahb_slave_miniTB;
   /* maybe a little overkill here but I'm fine with it */
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(2)
   `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(3)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(4)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(5)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(6)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(7)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(8)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(9)
-  `_NTH_of_multiple_back2back_NONSEQ_write_n_to_addr(10)
 
 
   //------------------------------
@@ -219,6 +212,27 @@ module ahb_slave_miniTB;
   `SMOKETEST(NONSEQ_read_ready)
     basic_read(8'h0, rdata);
     `FAIL_UNLESS(hready_eq(1));
+  `SMOKETEST_END
+
+  `SMOKETEST(single_NONSEQ_read_data_undefined_during_address_phase)
+    set_slave_data('h0, 'h8);
+    fork_basic_read();
+    #0 `FAIL_UNLESS(hrdata_eq('h0));
+  `SMOKETEST_END
+ 
+  `SMOKETEST(single_NONSEQ_read_transitions_to_IDLE)
+    fork_basic_read();
+    at_data_phase();
+    `FAIL_UNLESS(htrans_eq(0));
+    `FAIL_UNLESS(haddr_eq('hx));
+    `FAIL_UNLESS(hwrite_eq('hx));
+  `SMOKETEST_END
+ 
+  `SMOKETEST(single_NONSEQ_read_data_undefined_after_data_phase)
+    set_slave_data('h0, 'h8);
+    fork_basic_read();
+    at_data_phase(1);
+    `FAIL_UNLESS(hrdata_eq('h0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_reads_complete_in_1_cycles)
@@ -378,6 +392,14 @@ task fork_basic_write(logic [31:0] addr,
   fork
     begin
       mst.basic_write(addr, data);
+    end
+  join_none
+endtask
+
+task fork_basic_read();
+  fork
+    begin
+      mst.basic_read('h0, rdata);
     end
   join_none
 endtask

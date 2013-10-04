@@ -103,6 +103,61 @@ module apb_slave_miniTB;
   //===================================
   `SMOKE_TESTS_BEGIN
 
+  //************************************************************
+  // Test:
+  //   single_write_to_idle
+  //
+  // Desc:
+  //   make sure a write finishes in the idle state
+  //************************************************************
+  `SMOKETEST(single_write_idle)
+    mst.write(addr, data);
+    wait_a_few_cycles(1);
+    `FAIL_IF(mst.psel !== 0);
+    `FAIL_IF(mst.penable !== 0);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   single_write_is_2_cycles
+  //
+  // Desc:
+  //   make sure a write completes in 2 cycles
+  //************************************************************
+  `SMOKETEST(single_write_is_2_cycles)
+    fail_on_timeout(3);
+    mst.write(addr, data);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   single_read_is_2_cycles
+  //
+  // Desc:
+  //   make sure a read completes in 2 cycles
+  //************************************************************
+  `SMOKETEST(single_read_is_2_cycles)
+    fail_on_timeout(3);
+    mst.read(addr, data);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   single_read_idle
+  //
+  // Desc:
+  //   make sure a read finishes in the idle state
+  //************************************************************
+  `SMOKETEST(single_read_idle)
+    mst.read(addr, data);
+    wait_a_few_cycles(1);
+    `FAIL_IF(mst.psel !== 0);
+    `FAIL_IF(mst.penable !== 0);
+  `SMOKETEST_END
+
 
   //************************************************************
   // Test:
@@ -116,6 +171,7 @@ module apb_slave_miniTB;
     data = 'h61;
 
     mst.write(addr, data);
+    wait_a_few_cycles(1);
     mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
   `SMOKETEST_END
@@ -135,7 +191,9 @@ module apb_slave_miniTB;
     data = 'hffff_ffff;
 
     mst.write(addr, data);
-    mst.write(addr, 'hff, 0, 0 /* inactive psel */);
+    wait_a_few_cycles(1);
+    mst.write(addr, 'hff, 0 /* inactive psel */);
+    wait_a_few_cycles(1);
     mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
   `SMOKETEST_END
@@ -155,7 +213,9 @@ module apb_slave_miniTB;
     data = 'h99;
 
     mst.write(addr, data);
-    mst.write(addr, 'hff, 0, 1, 0 /* inactive pwrite */);
+    wait_a_few_cycles(1);
+    mst.write(addr, 'hff, 1, 0 /* inactive pwrite */);
+    wait_a_few_cycles(1);
     mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
   `SMOKETEST_END
@@ -169,18 +229,76 @@ module apb_slave_miniTB;
   //   Do back-to-back writes then back-to-back reads
   //************************************************************
   `SMOKETEST(_2_writes_then_2_reads)
-    addr = 'hfe;
-    data = 'h31;
-
-    mst.write(addr, data, 1);
-    mst.write(addr+1, data+1, 1);
-    mst.read(addr, rdata, 1);
+    mst.write(addr, data);
+    mst.write(addr+1, data+1);
+    mst.read(addr, rdata);
     `FAIL_IF(data !== rdata);
-    mst.read(addr+1, rdata, 1);
+    mst.read(addr+1, rdata);
     `FAIL_IF(data+1 !== rdata);
+  `SMOKETEST_END
 
+
+  //************************************************************
+  // Test:
+  //   _no_space_between_back2back_write
+  //************************************************************
+  `SMOKETEST(_no_space_between_back2back_write)
+    fail_on_timeout(5);
+    repeat(2) mst.write(addr, data);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   _no_space_between_back2back_read
+  //************************************************************
+  `SMOKETEST(_no_space_between_back2back_read)
+    fail_on_timeout(5);
+    repeat(2) mst.read(addr, data);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   _no_space_between_back2back_write_then_read
+  //************************************************************
+  `SMOKETEST(_no_space_between_back2back_write_then_read)
+    fail_on_timeout(5);
+    mst.write(addr, data);
+    mst.read(addr, data);
+  `SMOKETEST_END
+
+
+  //************************************************************
+  // Test:
+  //   _no_space_between_back2back_read_then_write
+  //************************************************************
+  `SMOKETEST(_no_space_between_back2back_read_then_write)
+    fail_on_timeout(5);
+    mst.read(addr, data);
+    mst.write(addr, data);
   `SMOKETEST_END
 
 
   `SMOKE_TESTS_END
+
+
+task wait_a_few_cycles(int num_cycles);
+  repeat (num_cycles) @(posedge clk);
+endtask
+
+function bit mst_is_active();
+  return (mst.penable || mst.psel);
+endfunction
+
+task fail_on_timeout(int num_cycles);
+  @(posedge clk);
+  fork
+    begin
+      wait_a_few_cycles(num_cycles);
+      `FAIL_IF(mst_is_active());
+    end
+  join_none
+endtask
+
 endmodule

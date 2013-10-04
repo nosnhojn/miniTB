@@ -24,12 +24,12 @@ interface miniTB_apb_master
   input wire clk,
   input wire rst_n
 );
-  logic [7:0]   paddr;
-  logic         pwrite;
-  logic         psel;
-  logic         penable;
-  logic [31:0]  pwdata;
-  wire [31:0] prdata;
+  logic [7:0]  paddr;
+  logic        pwrite;
+  logic        psel;
+  logic        penable;
+  logic [31:0] pwdata;
+  logic [31:0] prdata;
 
   //-------------------------------------------------------------------------------
   //
@@ -41,16 +41,9 @@ interface miniTB_apb_master
   //-------------------------------------------------------------------------------
   task write(logic [7:0] addr,
              logic [31:0] data,
-             logic back2back = 0,
              logic setup_psel = 1,
              logic setup_pwrite = 1);
 
-    // if !back2back, insert an idle cycle before the write
-    if (!back2back) begin
-      @(negedge clk);
-      psel = 0;
-      penable = 0;
-    end
 
     // this is the SETUP state where the psel,
     // pwrite, paddr and pdata are set
@@ -58,18 +51,22 @@ interface miniTB_apb_master
     // NOTE:
     //   setup_psel == 0 for protocol errors on the psel
     //   setup_pwrite == 0 for protocol errors on the pwrite
-    @(negedge clk);
-    psel = setup_psel;
-    pwrite = setup_pwrite;
-    paddr = addr;
-    pwdata = data;
-    penable = 0;
+    if (!penable) @(negedge clk);
+    psel <= setup_psel;
+    pwrite <= setup_pwrite;
+    paddr <= addr;
+    pwdata <= data;
+    penable <= 0;
 
     // this is the ENABLE state where the penable is asserted
     @(negedge clk);
-    pwrite = 1;
-    penable = 1;
-    psel = 1;
+    pwrite <= 1;
+    penable <= 1;
+    psel <= 1;
+
+    // return to the IDLE state
+    @(negedge clk);
+    idle();
   endtask
 
 
@@ -81,29 +78,23 @@ interface miniTB_apb_master
   // reads.
   //
   //-------------------------------------------------------------------------------
-  task read(logic [7:0] addr, output logic [31:0] data, input logic back2back = 0);
-
-    // if !back2back, insert an idle cycle before the read
-    if (!back2back) begin
-      @(negedge clk);
-      psel = 0;
-      penable = 0;
-    end
+  task read(logic [7:0] addr, output logic [31:0] data);
 
     // this is the SETUP state where the psel, pwrite and paddr
-    @(negedge clk);
-    psel = 1;
-    paddr = addr;
-    penable = 0;
-    pwrite = 0;
+    if (!penable) @(negedge clk);
+    psel <= 1;
+    paddr <= addr;
+    penable <= 0;
+    pwrite <= 0;
 
     // this is the ENABLE state where the penable is asserted
     @(negedge clk);
-    penable = 1;
+    penable <= 1;
 
-    // the prdata should be flopped after the subsequent posedge
-    @(posedge clk);
-    #1 data = prdata;
+    // sample the data and return to the IDLE state
+    @(negedge clk);
+    data = prdata;
+    idle();
   endtask
 
 
@@ -115,12 +106,11 @@ interface miniTB_apb_master
   //
   //-------------------------------------------------------------------------------
   task idle();
-    @(negedge clk);
-    psel = 0;
-    penable = 0;
-    pwrite = 0;
-    paddr = 0;
-    pwdata = 0;
+    psel <= 0;
+    penable <= 0;
+    pwrite <= 0;
+    paddr <= 0;
+    pwdata <= 0;
   endtask
 
 endinterface

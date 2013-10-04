@@ -199,16 +199,17 @@ module ahb_slave_miniTB;
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_read_0_from_base)
+    set_slave_data('h0, 'h0);
     basic_read(8'h0, rdata);
     `FAIL_UNLESS(rdata === 'h0);
   `SMOKETEST_END
  
-// `SMOKETEST(NONSEQ_write_0_to_n)
-//   single_nonseq_write(8'hc, 32'h0);
-//   at_data_phase();
-//   `FAIL_UNLESS(slave_data_eq('hc, 'h0));
-// `SMOKETEST_END
-//
+  `SMOKETEST(NONSEQ_read_0_from_n)
+    set_slave_data('hc, 'h0);
+    basic_read(8'hc, rdata);
+    `FAIL_UNLESS(rdata === 'h0);
+  `SMOKETEST_END
+ 
 // `SMOKETEST(NONSEQ_write_n_to_addr)
 //   single_nonseq_write(8'hd, 32'h5a5a_5a5a);
 //   at_data_phase();
@@ -281,6 +282,10 @@ function bit htrans_eq(logic [1:0] l);  return (l === mst.htrans);  endfunction
 function bit hwrite_eq(logic [1:0] l);  return (l === mst.hwrite);  endfunction
 function bit haddr_eq(logic [7:0] l);   return (l === mst.haddr);   endfunction
 function bit hwdata_eq(logic [31:0] l);   return (l === mst.hwdata);   endfunction
+
+function void set_slave_data(logic [31:0] addr, logic [31:0] data);
+  uut.mem[addr] = data;
+endfunction
 
 function bit slave_data_eq(logic [31:0] addr,
                            logic [31:0] exp);

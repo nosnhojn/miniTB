@@ -101,9 +101,9 @@ module ahb_slave_miniTB;
   `SMOKETEST(reset_conditions)
     `FAIL_UNLESS(htrans_eq(0));
     `FAIL_UNLESS(hready_eq(0));
-    `FAIL_UNLESS(hwrite_eq(0));
-    `FAIL_UNLESS(haddr_eq(0));
-    `FAIL_UNLESS(hwdata_eq(0));
+    `FAIL_UNLESS(hwrite_eq('hx));
+    `FAIL_UNLESS(haddr_eq('hx));
+    `FAIL_UNLESS(hwdata_eq('hx));
     `FAIL_UNLESS(hrdata_eq(0));
   `SMOKETEST_END
 
@@ -133,6 +133,26 @@ module ahb_slave_miniTB;
     fork_basic_write(8'h0, 32'h0);
     at_address_phase();
     `FAIL_UNLESS(hready_eq(1));
+  `SMOKETEST_END
+
+  `SMOKETEST(single_NONSEQ_write_data_undefined_during_address_phase)
+    fork_basic_write(8'h0, 32'h0);
+    at_address_phase();
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(single_NONSEQ_write_transitions_to_IDLE)
+    fork_basic_write(8'h0, 32'h0);
+    at_data_phase();
+    `FAIL_UNLESS(htrans_eq(0));
+    `FAIL_UNLESS(haddr_eq('hx));
+    `FAIL_UNLESS(hwrite_eq('hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(single_NONSEQ_write_data_undefined_after_data_phase)
+    fork_basic_write(8'h0, 32'h0);
+    at_data_phase(1);
+    `FAIL_UNLESS(hwdata_eq('hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_0_to_base)
@@ -397,7 +417,7 @@ endtask
 
 function bit hready_eq(logic l);        return (l === mst.hready);  endfunction
 function bit htrans_eq(logic [1:0] l);  return (l === mst.htrans);  endfunction
-function bit hwrite_eq(logic [1:0] l);  return (l === mst.hwrite);  endfunction
+function bit hwrite_eq(logic l);        return (l === mst.hwrite);  endfunction
 function bit haddr_eq(logic [7:0] l);   return (l === mst.haddr);   endfunction
 function bit hwdata_eq(logic [31:0] l); return (l === mst.hwdata);  endfunction
 function bit hrdata_eq(logic [31:0] l); return (l === mst.hrdata);  endfunction

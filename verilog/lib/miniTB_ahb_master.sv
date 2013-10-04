@@ -49,17 +49,19 @@ logic [dataWidth-1:0] hrdata;
 parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
 
-logic end_of_trans = 0;
+logic data_phase = 0;
+logic addr_phase = 0;
 
 //
 // reset
 //
 function void reset();
-  htrans = 0;
-  haddr  = 0;
-  hwrite = 0;
-  hwdata = 0;
-  end_of_trans = 0;
+  htrans = IDLE;
+  haddr  = 'hx;
+  hwrite = 'hx;
+  hwdata = 'hx;
+  data_phase = 0;
+  addr_phase = 0;
 endfunction
 
 
@@ -67,9 +69,9 @@ endfunction
 // idle
 //
 task idle();
-  if (!end_of_trans) @(negedge hclk);
-  htrans = IDLE;
-  end_of_trans = 0;
+  if (!data_phase) @(negedge hclk);
+  reset();
+  data_phase = 0;
 endtask
 
 
@@ -79,18 +81,30 @@ endtask
 task automatic basic_write(logic [addrWidth-1:0] addr,
                            logic [dataWidth-1:0] data);
   // address phase
-  if (!end_of_trans) @(negedge hclk);
+  if (!data_phase) begin
+    @(negedge hclk);
+    hwdata = 'hx;
+  end
   haddr = addr;
   htrans = NONSEQ;
   hwrite = 1;
+  addr_phase = 1;
 
   // data phase
   @(negedge hclk);
+  haddr = 'hx;
+  htrans = IDLE;
+  hwrite = 'hx;
   hwdata = data;
-  end_of_trans = 1;
+  data_phase = 1;
+  addr_phase = 0;
 
   fork
-    #1 end_of_trans = 0;
+    #0 data_phase = 0;
+    if (!addr_phase) begin
+      @(negedge hclk);
+      hwdata = 'hx;
+    end
   join_none
 endtask
 
@@ -101,7 +115,7 @@ endtask
 task automatic basic_read(logic [addrWidth-1:0] addr,
                           ref logic [dataWidth-1:0] data);
   // address phase
-  if (!end_of_trans) @(negedge hclk);
+  if (!data_phase) @(negedge hclk);
   haddr = addr;
   htrans = NONSEQ;
   hwrite = 0;
@@ -109,10 +123,10 @@ task automatic basic_read(logic [addrWidth-1:0] addr,
   // sample hrdata during the data phase
   @(negedge hclk);
   data = hrdata;
-  end_of_trans = 1;
+  data_phase = 1;
 
   fork
-    #1 end_of_trans = 0;
+    #0 data_phase = 0;
   join_none
 endtask
 

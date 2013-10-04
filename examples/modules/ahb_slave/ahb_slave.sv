@@ -57,6 +57,7 @@ logic [1:0]           htrans_ap;
 always @(posedge hclk or negedge hresetn) begin
   if (!hresetn) begin
     hready    <= 0;
+    hrdata    <= 0;
     htrans_ap <= 0;
     hwrite_ap <= 0;
     haddr_ap  <= 0;
@@ -81,7 +82,7 @@ always @(posedge hclk or negedge hresetn) begin
 
     // nonseq reads
     if (htrans == NONSEQ && !hwrite) begin
-      hrdata <= 0;
+      hrdata <= mem[haddr];
     end
   end
 end

@@ -68,7 +68,9 @@ module ahb_slave_miniTB;
   // reset each smoke test
   //===================================
   task smoketest_reset();
+    rdata = 0;
     mst.reset();
+    slave_reset();
 
     rst_n = 0;
     at_sample_edge(5);
@@ -102,6 +104,7 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(hwrite_eq(0));
     `FAIL_UNLESS(haddr_eq(0));
     `FAIL_UNLESS(hwdata_eq(0));
+    `FAIL_UNLESS(hrdata_eq(0));
   `SMOKETEST_END
 
 
@@ -198,23 +201,123 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(hready_eq(1));
   `SMOKETEST_END
 
+  `SMOKETEST(NONSEQ_reads_complete_in_1_cycles)
+    fail_on_timeout(2);
+    basic_read('hx, rdata);
+  `SMOKETEST_END
+
   `SMOKETEST(NONSEQ_read_0_from_base)
     set_slave_data('h0, 'h0);
     basic_read(8'h0, rdata);
-    `FAIL_UNLESS(rdata === 'h0);
+    `FAIL_UNLESS(rdata_eq('h0));
   `SMOKETEST_END
  
   `SMOKETEST(NONSEQ_read_0_from_n)
     set_slave_data('hc, 'h0);
     basic_read(8'hc, rdata);
-    `FAIL_UNLESS(rdata === 'h0);
+    `FAIL_UNLESS(rdata_eq('h0));
   `SMOKETEST_END
  
-// `SMOKETEST(NONSEQ_write_n_to_addr)
-//   single_nonseq_write(8'hd, 32'h5a5a_5a5a);
-//   at_data_phase();
-//   `FAIL_UNLESS(slave_data_eq('hd, 'h5a5a_5a5a));
-// `SMOKETEST_END
+  `SMOKETEST(NONSEQ_read_n_from_addr)
+    set_slave_data(8'h1d, 32'h5a5a_5a5a);
+    basic_read(8'h1d, rdata);
+    `FAIL_UNLESS(rdata_eq('h5a5a_5a5a));
+  `SMOKETEST_END
+
+
+  //------------------------------------------
+  // Multiple pipelined NONSEQ read transfers
+  //------------------------------------------
+
+  `SMOKETEST(_2_back2back_NONSEQ_reads_complete_in_2_cycles)
+    fail_on_timeout(3);
+    repeat (2) basic_read('hx, rdata);
+  `SMOKETEST_END
+
+  `SMOKETEST(_3_back2back_NONSEQ_reads_complete_in_3_cycles)
+    fail_on_timeout(4);
+    repeat (3) basic_read('hx, rdata);
+  `SMOKETEST_END
+
+  `SMOKETEST(_2_back2back_NONSEQ_reads)
+    set_slave_data('h10, 'hffff_ff00);
+    set_slave_data('hc, 'hff);
+
+    basic_read('h10, rdata);
+    `FAIL_UNLESS(rdata_eq('hffff_ff00));
+    basic_read('hc, rdata);
+    `FAIL_UNLESS(rdata_eq('hff));
+  `SMOKETEST_END
+
+
+  //------------------------------------------------
+  // Multiple pipelined NONSEQ write/read transfers 
+  //------------------------------------------------
+
+  `SMOKETEST(_back2back_NONSEQ_write_then_read_completes_in_2_cycles)
+    fail_on_timeout(3);
+    basic_write('hx, 'hx);
+    basic_read('hx, rdata);
+  `SMOKETEST_END
+
+  `SMOKETEST(_back2back_NONSEQ_read_then_write_then_completes_in_2_cycles)
+    fail_on_timeout(3);
+    basic_read('hx, rdata);
+    basic_write('hx, 'hx);
+  `SMOKETEST_END
+
+  `SMOKETEST(_back2back_NONSEQ_write_not_disrupted_by_subsequent_read)
+    fork
+      begin
+        basic_write('h8, 'h55);
+        basic_read('h8, rdata);
+      end
+    join_none
+    at_data_phase();
+    `FAIL_UNLESS(slave_data_eq('h8, 'h55));
+  `SMOKETEST_END
+
+  `SMOKETEST(_back2back_NONSEQ_write_not_disrupted_by_previous_read)
+    basic_read('h8, rdata);
+    fork_basic_write('h8, 'h75);
+    at_data_phase();
+    `FAIL_UNLESS(slave_data_eq('h8, 'h75));
+  `SMOKETEST_END
+
+  `SMOKETEST(_back2back_NONSEQ_read_not_disrupted_by_subsequent_write)
+    set_slave_data('hc, 'hd);
+    basic_read('hc, rdata);
+    basic_write('hc, 'hx);
+    `FAIL_UNLESS(rdata_eq('hd));
+  `SMOKETEST_END
+
+  `SMOKETEST(_back2back_NONSEQ_read_not_disrupted_by_previous_write)
+    set_slave_data('hc, 'hd0);
+    basic_write('hc, 'hx);
+    basic_read('hc, rdata);
+    `FAIL_UNLESS(rdata_eq('hd0));
+  `SMOKETEST_END
+
+
+  //--------------------------------------------
+  // combined IDLE/NONSEQ write/ready transfers
+  //--------------------------------------------
+
+  `SMOKETEST(alternating_IDLE_NONSEQ_write_take_num_xactions_cycles_to_complete);
+    fail_on_timeout(21);
+    repeat (10) begin
+      mst.idle();
+      mst.basic_write('hx, 'hx);
+    end
+  `SMOKETEST_END
+
+  `SMOKETEST(alternating_IDLE_NONSEQ_read_take_num_xactions_cycles_to_complete);
+    fail_on_timeout(21);
+    repeat (10) begin
+      mst.idle();
+      mst.basic_read('hx, rdata);
+    end
+  `SMOKETEST_END
 
 
   // Single NONSEQ write w/wait states
@@ -233,6 +336,16 @@ module ahb_slave_miniTB;
 
   `SMOKE_TESTS_END
 
+task fail_on_timeout(int num_cycles);
+  bit timeout = 1;
+  @(posedge clk);
+  fork
+    begin
+      at_sample_edge(num_cycles);
+      `FAIL_IF(timeout);
+    end
+  join_none
+endtask
 
 task single_idle_trans();
   fork
@@ -241,12 +354,17 @@ task single_idle_trans();
 endtask
 
 task fork_basic_write(logic [31:0] addr,
-                       logic [31:0] data);
+                      logic [31:0] data);
   fork
     begin
       mst.basic_write(addr, data);
     end
   join_none
+endtask
+
+task basic_write(logic [31:0] addr,
+                 logic [31:0] data);
+  mst.basic_write(addr, data);
 endtask
 
 task automatic basic_read(logic [31:0] addr,
@@ -281,7 +399,9 @@ function bit hready_eq(logic l);        return (l === mst.hready);  endfunction
 function bit htrans_eq(logic [1:0] l);  return (l === mst.htrans);  endfunction
 function bit hwrite_eq(logic [1:0] l);  return (l === mst.hwrite);  endfunction
 function bit haddr_eq(logic [7:0] l);   return (l === mst.haddr);   endfunction
-function bit hwdata_eq(logic [31:0] l);   return (l === mst.hwdata);   endfunction
+function bit hwdata_eq(logic [31:0] l); return (l === mst.hwdata);  endfunction
+function bit hrdata_eq(logic [31:0] l); return (l === mst.hrdata);  endfunction
+function bit rdata_eq(logic [31:0] l);  return (l === rdata);       endfunction
 
 function void set_slave_data(logic [31:0] addr, logic [31:0] data);
   uut.mem[addr] = data;
@@ -290,6 +410,10 @@ endfunction
 function bit slave_data_eq(logic [31:0] addr,
                            logic [31:0] exp);
   return (uut.mem[addr] === exp);
+endfunction
+
+function void slave_reset();
+  for (int i=0; i<uut.memDepth; i+=1) uut.mem[i] = 'hx;
 endfunction
 
 endmodule

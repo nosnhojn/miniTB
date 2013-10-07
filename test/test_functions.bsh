@@ -89,7 +89,7 @@ expect_file_does_not_contain() {
 }
 
 expect_miniTB_pass() {
-  grep "INFO:  \[.*\]\[.*miniTB\]: .*miniTB::PASSED" $1 >/dev/null
+  grep "INFO:  \[.*\]\[.*miniTB\]: MiniTB Exit Status:  PASSED" $1 >/dev/null
   if [ "$?" != "0" ]; then
     echo PASS not detected from miniTB in $1
     exit 1;
@@ -97,7 +97,7 @@ expect_miniTB_pass() {
 }
 
 expect_miniTB_fail() {
-  grep "INFO:  \[.*\]\[.*miniTB\]: .*miniTB::FAILED" $1 >/dev/null
+  grep "INFO:  \[.*\]\[.*miniTB\]: MiniTB Exit Status:  FAILED" $1 >/dev/null
   if [ "$?" != "0" ]; then
     echo FAIL not detected from Testrunner in $1
     exit 1;

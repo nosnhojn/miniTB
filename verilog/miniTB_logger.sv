@@ -204,10 +204,12 @@ endfunction
   This task reports the results for the unit tests
 */  
 function void miniTB_logger::report();
+  $display("\n");
   if (success == PASS)
-    `INFO($psprintf("%0s::PASSED", name));
+    `INFO("MiniTB Exit Status:  PASSED");
   else
-    `INFO($psprintf("%0s::FAILED", name));
+    `INFO("MiniTB Exit Status:  FAILED");
+  $display("\n");
 endfunction
 
 

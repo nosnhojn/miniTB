@@ -146,7 +146,7 @@ sub buildCmdLine() {
     print $fh "quit -f\n";
   }
   elsif ($simulator eq "vcs") {
-    $SVUNIT_SIM .= "+vcs+vcdpluson -debug";
+    $SVUNIT_SIM .= "-sverilog +vcs+vcdpluson -debug";
   }
 }
 

@@ -99,6 +99,10 @@ task automatic basic_write(logic [addrWidth-1:0] addr,
   data_phase = 1;
   addr_phase = 0;
 
+  while (!hready) begin
+    @(negedge hclk);
+  end
+
   fork
     #0 data_phase = 0;
     if (!addr_phase) begin

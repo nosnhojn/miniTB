@@ -36,6 +36,7 @@ module ahb_slave_miniTB;
   // This is the module that we're 
   // smoke testing
   //===================================
+  logic slv_busy;
   ahb_slave uut
   (
     .hclk(clk),
@@ -45,7 +46,8 @@ module ahb_slave_miniTB;
     .hwrite(mst.hwrite),
     .haddr(mst.haddr),
     .hwdata(mst.hwdata),
-    .hrdata(mst.hrdata)
+    .hrdata(mst.hrdata),
+    .slv_busy(slv_busy)
   );
 
   minitb_ahb_master mst
@@ -69,6 +71,7 @@ module ahb_slave_miniTB;
   //===================================
   task smoketest_reset();
     rdata = 0;
+    slv_busy = 0;
     mst.reset();
     slave_reset();
 
@@ -100,7 +103,6 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(reset_conditions)
     `FAIL_UNLESS(htrans_eq(0));
-    `FAIL_UNLESS(hready_eq(0));
     `FAIL_UNLESS(hwrite_eq('hx));
     `FAIL_UNLESS(haddr_eq('hx));
     `FAIL_UNLESS(hwdata_eq('hx));
@@ -112,10 +114,9 @@ module ahb_slave_miniTB;
   // Idle transfer
   //---------------
 
-  `SMOKETEST(hready_inactive_for_address_phase)
-    single_idle_trans();
-    at_sample_edge(0);
-    `FAIL_UNLESS(hready_eq(0));
+  `SMOKETEST(hready_inactive_while_busy)
+    slave_busy();
+    #0 `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
 
   `SMOKETEST(hready_active_for_IDLE_xfer)
@@ -354,8 +355,86 @@ module ahb_slave_miniTB;
   `SMOKETEST_END
 
 
+  //-----------------------------------
   // Single NONSEQ write w/wait states
+  //-----------------------------------
 
+  `SMOKETEST(NONSEQ_slave_not_ready_in_wait_state)
+    fork_basic_write(8'h0, 32'h0);
+    slave_busy();
+    at_data_phase(0);
+    `FAIL_UNLESS(hready_eq(0));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_slave_ready_after_wait_state)
+    fork_basic_write(8'h0, 32'h0);
+    with_wait_state(1);
+    at_data_phase(1);
+    `FAIL_UNLESS(hready_eq(1));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_active_in_wait_state)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(1);
+    at_data_phase(0);
+    `FAIL_UNLESS(hwdata_eq('hff));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_ignored_in_wait_state)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(1);
+    at_data_phase(0);
+    `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_flopped_after_wait_state)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(1);
+    at_data_phase(1);
+    `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_wait_state)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(1);
+    at_data_phase(2);
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_active_on_first_of_several_wait_states)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(8);
+    at_data_phase(1);
+    `FAIL_UNLESS(hwdata_eq('hff));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_active_on_last_of_several_wait_states)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(8);
+    at_data_phase(7);
+    `FAIL_UNLESS(hwdata_eq('hff));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_ignored_during_several_wait_states)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(8);
+    at_data_phase(7);
+    `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_flopped_after_several_wait_states)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(8);
+    at_data_phase(8);
+    `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
+  `SMOKETEST_END
+
+  `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_several_wait_states)
+    fork_basic_write(8'hfc, 32'hff);
+    with_wait_state(10);
+    at_data_phase(11);
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
 
 
   // Single NONSEQ read w/wait states
@@ -414,7 +493,7 @@ task automatic basic_read(logic [31:0] addr,
   mst.basic_read(addr, data);
 endtask
 
-task at_sample_edge(int n);
+task at_sample_edge(int n = 1);
   repeat (n) begin
     @(posedge clk);
     #1;
@@ -457,5 +536,24 @@ endfunction
 function void slave_reset();
   for (int i=0; i<uut.memDepth; i+=1) uut.mem[i] = 'hx;
 endfunction
+
+task slave_busy();
+  slv_busy = 1;
+endtask
+
+task slave_ready();
+  slv_busy = 0;
+endtask
+
+task with_wait_state(int cnt = 1);
+  fork
+    begin
+      at_sample_edge();
+      slave_busy();
+      repeat (cnt) at_sample_edge();
+      slave_ready();
+    end
+  join_none
+endtask
 
 endmodule

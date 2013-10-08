@@ -110,7 +110,7 @@
 \
     `INFO($sformatf(`"%s::RUNNING`", _testName)); \
     logger.setup(); \
-    smoketest_reset(); \
+    #0 smoketest_reset(); \
     logger.is_running = 1; \
     fork \
       begin \

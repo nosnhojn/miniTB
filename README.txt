@@ -56,13 +56,25 @@ Step-by-step instructions to build your own miniTB
 1b) or you can source the Setup.csh (if you use the csh shell)
 >source Setup.csh
 
+
 2) go somewhere and generate a miniTB. This'll give you a verilog
 miniTB template and a miniTB filelist
 >cd <somewhere>
 >build_miniTB.pl -module_name my_module
 
-3) add any required files, include directories, misc filelist switches
-to my_module_miniTB.f
+
+3) build a module under test
+---
+  my_module.sv:
+    module my_module(
+      output wire o_sig
+    );
+
+    assign o_sig = 1;
+
+    endmodule
+---
+
 
 4) add smoke tests to your miniTB using the SMOKETEST macros
 ---
@@ -73,19 +85,24 @@ to my_module_miniTB.f
     // Unit test: test_mytest
     //===================================
     `SMOKETEST(my_smoke_test)
-      <exercise uut functionality>
-      `FAIL_IF(uut.some_signal != <some_value>);
+      `FAIL_IF(uut.o_sig !== 'b1);
     `SMOKETEST_END
 
     `SMOKE_TESTS_END
 ---
 
-7) run your miniTB with the simulator of your choice (ius, questa or vcs)
+
+5) if required, add any required files, include directories, misc filelist
+switches to my_module_miniTB.f
+
+
+6) run your miniTB with the simulator of your choice (ius, questa or vcs)
 >run_miniTB.pl -ius my_module_miniTB.f   # OR
 >run_miniTB.pl -questa my_module_miniTB.f   # OR
 >run_miniTB.pl -vcs my_module_miniTB.f
 
-8) pat self on back
+
+7) pat self on back
 
 
 ----------------------------------------------------------------------

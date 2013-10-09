@@ -31,7 +31,7 @@ module ahb_slave
 
   input                        hselx,
 
-  output wire                  hready,
+  output logic                 hready,
 // output logic [1:0]           hresp,
 //
 //
@@ -55,9 +55,8 @@ logic [dataWidth-1:0] mem [memDepth];
 logic [addrWidth-1:0] haddr_ap;
 logic                 hwrite_ap;
 logic [1:0]           htrans_ap;
+logic                 hready_d1;
 
-
-assign hready = ~slv_busy;
 
 always @(posedge hclk or negedge hresetn) begin
   if (!hresetn) begin
@@ -65,18 +64,22 @@ always @(posedge hclk or negedge hresetn) begin
     htrans_ap <= 0;
     hwrite_ap <= 0;
     haddr_ap  <= 0;
+    hready    <= 1;
+    hready_d1 <= 1;
   end
 
   else begin
+    hready <= ~slv_busy;
+    hready_d1 <= hready;
     if (hready) begin
       htrans_ap <= htrans;
       hwrite_ap <= hwrite;
       haddr_ap  <= haddr;
     end
 
-//$display("%t - htrans_ap:%0x hwrite_ap:%0x haddr_ap:0x%0x hwdata:0x%0x", $time, htrans_ap, hwrite_ap, haddr_ap, hwdata);
+//$display("%t - hready:%0x hready_d1:%0x htrans_ap:%0x hwrite_ap:%0x haddr_ap:0x%0x hwdata:0x%0x hrdata:0x%0x", $time, hready, hready_d1, htrans_ap, hwrite_ap, haddr_ap, hwdata, hrdata);
 
-//$display("%t - slv_busy:%0x hready:%0x htrans:%0x hwrite:%0x haddr:0x%0x hwdata:0x%0x", $time, slv_busy, hready, htrans, hwrite, haddr, hwdata);
+//$display("%t - hready:%0x htrans:%0x hwrite:%0x haddr:0x%0x hwdata:0x%0x hrdata:0x%0x", $time, hready, htrans, hwrite, haddr, hwdata, hrdata);
 
     // nonseq writes
     if (htrans_ap == NONSEQ && hwrite_ap && hready) begin
@@ -84,8 +87,12 @@ always @(posedge hclk or negedge hresetn) begin
     end
 
     // nonseq reads
-    if (htrans == NONSEQ && !hwrite) begin
+    if (htrans == NONSEQ && !hwrite && !slv_busy) begin
       hrdata <= mem[haddr];
+    end
+
+    else if (htrans_ap == NONSEQ && !hwrite_ap && (!slv_busy && !hready)) begin
+      hrdata <= mem[haddr_ap];
     end
 
     else begin

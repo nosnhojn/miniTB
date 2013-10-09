@@ -10,7 +10,7 @@
       end \
     end \
   join_none \
-  at_data_phase(N-1); \
+  at_wdata_phase(N-1); \
   `FAIL_UNLESS(slave_data_eq('h99-(N-1), 'hfff-(N-1))); \
 `SMOKETEST_END
 
@@ -116,12 +116,13 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(hready_inactive_while_busy)
     slave_busy();
-    #0 `FAIL_UNLESS(hready_eq(0));
+    at_sample_edge();
+    `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
 
   `SMOKETEST(hready_active_for_IDLE_xfer)
     single_idle_trans();
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(hready_eq(1));
   `SMOKETEST_END
 
@@ -144,7 +145,7 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(single_NONSEQ_write_transitions_to_IDLE)
     fork_basic_write(8'h0, 32'h0);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(htrans_eq(0));
     `FAIL_UNLESS(haddr_eq('hx));
     `FAIL_UNLESS(hwrite_eq('hx));
@@ -152,25 +153,25 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(single_NONSEQ_write_data_undefined_after_data_phase)
     fork_basic_write(8'h0, 32'h0);
-    at_data_phase(1);
+    at_wdata_phase(1);
     `FAIL_UNLESS(hwdata_eq('hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_0_to_base)
     fork_basic_write(8'h0, 32'h0);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('h0, 'h0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_0_to_n)
     fork_basic_write(8'hc, 32'h0);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('hc, 'h0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_n_to_addr)
     fork_basic_write(8'hd, 32'h5a5a_5a5a);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('hd, 'h5a5a_5a5a));
   `SMOKETEST_END
   
@@ -181,11 +182,11 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(multiple_NONSEQ_write_n_to_addr)
     fork_basic_write('h2, 'h22);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('h2, 'h22));
 
     fork_basic_write('h3, 'h33);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('h3, 'h33));
   `SMOKETEST_END
 
@@ -197,7 +198,7 @@ module ahb_slave_miniTB;
       end
     join_none
  
-    at_data_phase(); // first
+    at_wdata_phase(0); // first
     `FAIL_UNLESS(slave_data_eq('h5, 'h55));
   `SMOKETEST_END
 
@@ -217,13 +218,13 @@ module ahb_slave_miniTB;
 
   `SMOKETEST(single_NONSEQ_read_data_undefined_during_address_phase)
     set_slave_data('h0, 'h8);
-    fork_basic_read();
+    fork_basic_read('hx, rdata);
     #0 `FAIL_UNLESS(hrdata_eq('h0));
   `SMOKETEST_END
  
   `SMOKETEST(single_NONSEQ_read_transitions_to_IDLE)
-    fork_basic_read();
-    at_data_phase();
+    fork_basic_read('hx, rdata);
+    at_wdata_phase(0);
     `FAIL_UNLESS(htrans_eq(0));
     `FAIL_UNLESS(haddr_eq('hx));
     `FAIL_UNLESS(hwrite_eq('hx));
@@ -231,8 +232,8 @@ module ahb_slave_miniTB;
  
   `SMOKETEST(single_NONSEQ_read_data_undefined_after_data_phase)
     set_slave_data('h0, 'h8);
-    fork_basic_read();
-    at_data_phase(1);
+    fork_basic_read('hx, rdata);
+    at_wdata_phase(0);
     `FAIL_UNLESS(hrdata_eq('h0));
   `SMOKETEST_END
 
@@ -308,14 +309,14 @@ module ahb_slave_miniTB;
         basic_read('h8, rdata);
       end
     join_none
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('h8, 'h55));
   `SMOKETEST_END
 
   `SMOKETEST(_back2back_NONSEQ_write_not_disrupted_by_previous_read)
     basic_read('h8, rdata);
     fork_basic_write('h8, 'h75);
-    at_data_phase();
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('h8, 'h75));
   `SMOKETEST_END
 
@@ -362,82 +363,134 @@ module ahb_slave_miniTB;
   `SMOKETEST(NONSEQ_slave_not_ready_in_wait_state)
     fork_basic_write(8'h0, 32'h0);
     slave_busy();
-    at_data_phase(0);
+    at_wdata_phase(0);
     `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_slave_ready_after_wait_state)
     fork_basic_write(8'h0, 32'h0);
     with_wait_state(1);
-    at_data_phase(1);
+    at_wdata_phase(1);
     `FAIL_UNLESS(hready_eq(1));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_active_in_wait_state)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(1);
-    at_data_phase(0);
+    at_wdata_phase(0);
     `FAIL_UNLESS(hwdata_eq('hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_ignored_in_wait_state)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(1);
-    at_data_phase(0);
+    at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_flopped_after_wait_state)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(1);
-    at_data_phase(1);
+    at_wdata_phase(1);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_wait_state)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(1);
-    at_data_phase(2);
+    at_wdata_phase(2);
     `FAIL_UNLESS(hwdata_eq('hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_active_on_first_of_several_wait_states)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(8);
-    at_data_phase(1);
+    at_wdata_phase(1);
     `FAIL_UNLESS(hwdata_eq('hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_active_on_last_of_several_wait_states)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(8);
-    at_data_phase(7);
+    at_wdata_phase(7);
     `FAIL_UNLESS(hwdata_eq('hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_ignored_during_several_wait_states)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(8);
-    at_data_phase(7);
+    at_wdata_phase(7);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_flopped_after_several_wait_states)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(8);
-    at_data_phase(8);
+    at_wdata_phase(8);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_several_wait_states)
     fork_basic_write(8'hfc, 32'hff);
     with_wait_state(10);
-    at_data_phase(11);
+    at_wdata_phase(11);
     `FAIL_UNLESS(hwdata_eq('hx));
   `SMOKETEST_END
 
 
+  //----------------------------------
   // Single NONSEQ read w/wait states
+  //----------------------------------
+
+  `SMOKETEST(NONSEQ_rdata_inactive_in_wait_state)
+    set_slave_data('hf8, 'hdfe);
+    fork_basic_read(8'hf8, rdata);
+    with_wait_state(1);
+    at_rdata_phase(0);
+    `FAIL_UNLESS(hrdata_eq('h0));
+  `SMOKETEST_END
+ 
+  `SMOKETEST(NONSEQ_rdata_active_after_wait_state)
+    set_slave_data('hf8, 'hdfe);
+    fork_basic_read(8'hf8, rdata);
+    with_wait_state(1);
+    at_rdata_phase(1);
+    `FAIL_UNLESS(hrdata_eq('hdfe));
+  `SMOKETEST_END
+
+// `SMOKETEST(NONSEQ_read_transitions_to_IDLE_during_wait_state)
+// `SMOKETEST_END
+ 
+// `SMOKETEST(NONSEQ_rdata_inactive_after_read_with_wait_state)
+//   set_slave_data('hf8, 'hdfe);
+//   fork_basic_read(8'hf8, rdata);
+//   with_wait_state(1);
+//   at_wdata_phase(2);
+//   `FAIL_UNLESS(hrdata_eq('hx));
+// `SMOKETEST_END
+
+
+
+
+
+
+// `SMOKETEST(NONSEQ_rdata_inactive_after_write_with_wait_state)
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_rdata_active_on_first_of_several_wait_states)
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_rdata_active_on_last_of_several_wait_states)
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_rdata_ignored_during_several_wait_states)
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_rdata_flopped_after_several_wait_states)
+// `SMOKETEST_END
+//
+// `SMOKETEST(NONSEQ_rdata_inactive_after_write_with_several_wait_states)
+// `SMOKETEST_END
 
 
 
@@ -475,10 +528,11 @@ task fork_basic_write(logic [31:0] addr,
   join_none
 endtask
 
-task fork_basic_read();
+task fork_basic_read(logic [31:0] addr = 0,
+                     output logic [31:0] rd);
   fork
     begin
-      mst.basic_read('h0, rdata);
+      mst.basic_read(addr, rd);
     end
   join_none
 endtask
@@ -500,8 +554,12 @@ task at_sample_edge(int n = 1);
   end
 endtask
 
-task at_data_phase(int n=0);
+task at_wdata_phase(int n=0);
   at_sample_edge(2+n);
+endtask
+
+task at_rdata_phase(int n=0);
+  at_sample_edge(1+n);
 endtask
 
 task next_data_phase();
@@ -548,9 +606,9 @@ endtask
 task with_wait_state(int cnt = 1);
   fork
     begin
-      at_sample_edge();
+      repeat (1) @(negedge clk);
       slave_busy();
-      repeat (cnt) at_sample_edge();
+      repeat (cnt) @(negedge clk);
       slave_ready();
     end
   join_none

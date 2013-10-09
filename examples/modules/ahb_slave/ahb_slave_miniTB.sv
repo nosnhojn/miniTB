@@ -224,7 +224,7 @@ module ahb_slave_miniTB;
  
   `SMOKETEST(single_NONSEQ_read_transitions_to_IDLE)
     fork_basic_read('hx, rdata);
-    at_wdata_phase(0);
+    at_rdata_phase(1);
     `FAIL_UNLESS(htrans_eq(0));
     `FAIL_UNLESS(haddr_eq('hx));
     `FAIL_UNLESS(hwrite_eq('hx));
@@ -233,7 +233,7 @@ module ahb_slave_miniTB;
   `SMOKETEST(single_NONSEQ_read_data_undefined_after_data_phase)
     set_slave_data('h0, 'h8);
     fork_basic_read('hx, rdata);
-    at_wdata_phase(0);
+    at_rdata_phase(1);
     `FAIL_UNLESS(hrdata_eq('h0));
   `SMOKETEST_END
 

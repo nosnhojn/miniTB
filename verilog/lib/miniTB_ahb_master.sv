@@ -126,11 +126,15 @@ task automatic basic_read(logic [addrWidth-1:0] addr,
 
   // sample hrdata during the data phase
   @(negedge hclk);
-  data = hrdata;
   haddr = 'hx;
   htrans = 0;
   hwrite = 'hx;
   data_phase = 1;
+
+  while (!hready) begin
+    @(negedge hclk);
+  end
+  data = hrdata;
 
   fork
     #0 data_phase = 0;

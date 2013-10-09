@@ -76,11 +76,31 @@ endtask
 
 
 //
+// pipelined_write
+//
+task automatic pipelined_write(logic [addrWidth-1:0] addr,
+                               logic [dataWidth-1:0] data);
+  if (addr_phase) begin
+    @(negedge addr_phase);
+  end
+
+  fork
+    basic_write(addr,data);
+  join_none
+
+  // the context swith is here so that consecutive
+  // pipelined_writes are scheduled in order
+  #0;
+endtask
+
+
+//
 // basic_write
 //
 task automatic basic_write(logic [addrWidth-1:0] addr,
                            logic [dataWidth-1:0] data);
   // address phase
+  addr_phase = 1;
   if (!data_phase) begin
     @(negedge hclk);
     hwdata = 'hx;
@@ -88,7 +108,6 @@ task automatic basic_write(logic [addrWidth-1:0] addr,
   haddr = addr;
   htrans = NONSEQ;
   hwrite = 1;
-  addr_phase = 1;
 
   // data phase
   @(negedge hclk);

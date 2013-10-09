@@ -601,6 +601,62 @@ module ahb_slave_miniTB;
   // Pipelined NONSEQ write w/wait states
   //--------------------------------------
 
+  `SMOKETEST(first_pipelined_NONSEQ_write_transition_scheduled_first)
+    fork
+      begin
+        pipelined_write('h1, 'h1);
+        pipelined_write('h2, 'h2);
+      end
+    join_none
+    then_at_address_phase();
+    `FAIL_UNLESS(haddr_eq('h1));
+  `SMOKETEST_END
+
+  `SMOKETEST(second_pipelined_NONSEQ_write_transition_scheduled_second)
+    fork
+      begin
+        pipelined_write('h1, 'h1);
+        pipelined_write('h2, 'h2);
+      end
+    join_none
+    then_at_address_phase(1);
+    `FAIL_UNLESS(haddr_eq('h2));
+  `SMOKETEST_END
+
+  `SMOKETEST(pipelined_NONSEQ_write_first_of_extended_address_phase_with_wait_states)
+    with_wait_state(3);
+    fork
+      begin
+        pipelined_write('h1, 'h1);
+        pipelined_write('h2, 'h2);
+      end
+    join_none
+    then_at_address_phase(1);
+    `FAIL_UNLESS(haddr_eq('h2));
+  `SMOKETEST_END
+
+// `SMOKETEST(pipelined_NONSEQ_write_last_of_extended_address_phase_with_wait_states)
+//   with_wait_state(3);
+//   fork
+//     begin
+//       pipelined_write('h1, 'h1);
+//       pipelined_write('h2, 'h2);
+//     end
+//   join_none
+//   then_at_address_phase(3);
+//   `FAIL_UNLESS(haddr_eq('h2));
+// `SMOKETEST_END
+
+// `SMOKETEST(pipelined_NONSEQ_write_transitions_extend_address_phase_during_wait_state)
+//   pipelined_write('h1, 'hx);
+//   pipelined_write('h2, 'hx);
+//   with_wait_state(1);
+//   then_at_wdata_phase(0);
+//   `FAIL_UNLESS(htrans_eq(0));
+//   `FAIL_UNLESS(haddr_eq(uut.NONSEQ));
+//   `FAIL_UNLESS(hwrite_eq('h1));
+// `SMOKETEST_END
+
 
   // incremental bursts of various length
 
@@ -625,6 +681,11 @@ task single_idle_trans();
   fork
     mst.idle();
   join_none
+endtask
+
+task pipelined_write(logic [31:0] addr,
+                     logic [31:0] data);
+  mst.pipelined_write(addr, data);
 endtask
 
 task fork_a_basic_write(logic [31:0] addr,
@@ -678,8 +739,8 @@ task next_addr_phase();
   next_data_phase();
 endtask
 
-task then_at_address_phase();
-  at_sample_edge(1);
+task then_at_address_phase(int cnt = 0);
+  at_sample_edge(cnt+1);
 endtask
 
 function bit hready_eq(logic l);        return (l === mst.hready);  endfunction

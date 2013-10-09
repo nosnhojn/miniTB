@@ -120,7 +120,7 @@ module ahb_slave_miniTB;
     at_sample_edge();
     `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
-
+ 
   `SMOKETEST(hready_active_for_IDLE_xfer)
     single_idle_trans();
     then_at_wdata_phase(0);
@@ -525,6 +525,7 @@ module ahb_slave_miniTB;
   `SMOKETEST_END
  
   `SMOKETEST(NONSEQ_read_n_from_addr_with_several_wait_states)
+    fail_on_timeout(30);
     set_slave_data(8'h2d, 32'h7a5a_5a5a);
     inject_wait_states(23);
     do_a_basic_read(8'h2d, rdata);
@@ -536,12 +537,12 @@ module ahb_slave_miniTB;
   // combined IDLE/NONSEQ write/ready transfers with wait states
   //-------------------------------------------------------------
 
-  `SMOKETEST(NONSEQ_write_with_wait_state_not_disrupted_by_read)
-    inject_wait_states(1);
-    basic_write(8'h40, 'h9911);
-    do_a_basic_read(8'h40, rdata);
-    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
-  `SMOKETEST_END
+// `SMOKETEST(NONSEQ_write_with_wait_state_not_disrupted_by_read)
+//   inject_wait_states(1);
+//   basic_write(8'h40, 'h9911);
+//   do_a_basic_read(8'h40, rdata);
+//   `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
+// `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_read_with_wait_state_not_disrupted_by_write)
     set_slave_data(8'h1d, 32'h5a5a_5a5a);
@@ -551,126 +552,136 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
   `SMOKETEST_END
 
-  `SMOKETEST(NONSEQ_write_with_wait_state_not_disrupted_by_write)
-    inject_wait_states(1);
-    basic_write(8'h40, 'h9911);
-    basic_write(8'h44, 'hx);
-    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
-  `SMOKETEST_END
-
-  `SMOKETEST(NONSEQ_read_with_wait_state_not_disrupted_by_read)
-    set_slave_data(8'h1d, 32'h5a5a_5a5a);
-    inject_wait_states(1);
-    do_a_basic_read(8'h1d, rdata);
-    do_a_basic_read(8'h1d, ignore);
-    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
-  `SMOKETEST_END
-
-  `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_read)
-    inject_wait_states(11);
-    basic_write(8'h40, 'h9911);
-    do_a_basic_read(8'h40, rdata);
-    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
-  `SMOKETEST_END
-
-  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_write)
-    set_slave_data(8'h1d, 32'h5a5a_5a5a);
-    inject_wait_states(11);
-    do_a_basic_read(8'h1d, rdata);
-    basic_write(8'h1d, 'h9911);
-    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
-  `SMOKETEST_END
-
-  `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_write)
-    inject_wait_states(11);
-    basic_write(8'h40, 'h9911);
-    basic_write(8'h44, 'hx);
-    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
-  `SMOKETEST_END
-
-  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_read)
-    set_slave_data(8'h1d, 32'h5a5a_5a5a);
-    inject_wait_states(11);
-    do_a_basic_read(8'h1d, rdata);
-    do_a_basic_read(8'h1d, ignore);
-    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
-  `SMOKETEST_END
-
-
-  //--------------------------------------
-  // Pipelined NONSEQ write w/wait states
-  //--------------------------------------
-
-  `SMOKETEST(first_pipelined_NONSEQ_write_transition_scheduled_first)
-    fork
-      begin
-        pipelined_write('h1, 'h1);
-        pipelined_write('h2, 'h2);
-      end
-    join_none
-    then_at_address_phase();
-    `FAIL_UNLESS(haddr_eq('h1));
-  `SMOKETEST_END
-
-  `SMOKETEST(second_pipelined_NONSEQ_write_transition_scheduled_second)
-    fork
-      begin
-        pipelined_write('h1, 'h1);
-        pipelined_write('h2, 'h2);
-      end
-    join_none
-    then_at_address_phase(1);
-    `FAIL_UNLESS(haddr_eq('h2));
-  `SMOKETEST_END
-
-  `SMOKETEST(pipelined_NONSEQ_write_first_of_extended_address_phase_with_wait_states)
-    inject_wait_states(3);
-    fork
-      begin
-        pipelined_write('h1, 'h1);
-        pipelined_write('h2, 'h2);
-      end
-    join_none
-    then_at_address_phase(1);
-    `FAIL_UNLESS(haddr_eq('h2));
-  `SMOKETEST_END
-
-  `SMOKETEST(pipelined_NONSEQ_write_last_of_extended_address_phase_with_wait_states)
-    inject_wait_states(3);
-    fork
-      begin
-        pipelined_write('h1, 'h1);
-        pipelined_write('h2, 'h2);
-      end
-    join_none
-    then_at_address_phase(4);
-    `FAIL_UNLESS(haddr_eq('h2));
-  `SMOKETEST_END
-
-  `SMOKETEST(pipelined_NONSEQ_write_with_wait_states_transitions_to_IDLE)
-    inject_wait_states(3);
-    fork
-      begin
-        pipelined_write('h1, 'h1);
-        pipelined_write('h2, 'h2);
-      end
-    join_none
-    then_at_address_phase(5);
-    `FAIL_UNLESS(haddr_eq('hx));
-  `SMOKETEST_END
-
-// `SMOKETEST(multiple_pipelined_NONSEQ_write_transitions_to_IDLE)
-//   inject_wait_states(3);
-//   fork
-//     begin
-//       pipelined_write('h1, 'h1);
-//       pipelined_write('h2, 'h2);
-//       pipelined_write('h3, 'h3);
-//     end
-//   join_none
-//   then_at_address_phase(5);
-//   `FAIL_UNLESS(haddr_eq('hx));
-// `SMOKETEST_END
+//  `SMOKETEST(NONSEQ_write_with_wait_state_not_disrupted_by_write)
+//    inject_wait_states(1);
+//    basic_write(8'h40, 'h9911);
+//    basic_write(8'h44, 'hx);
+//    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(NONSEQ_read_with_wait_state_not_disrupted_by_read)
+//    set_slave_data(8'h1d, 32'h5a5a_5a5a);
+//    inject_wait_states(1);
+//    do_a_basic_read(8'h1d, rdata);
+//    do_a_basic_read(8'h1d, ignore);
+//    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_read)
+//    inject_wait_states(11);
+//    basic_write(8'h40, 'h9911);
+//    do_a_basic_read(8'h40, rdata);
+//    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_write)
+//    set_slave_data(8'h1d, 32'h5a5a_5a5a);
+//    inject_wait_states(11);
+//    do_a_basic_read(8'h1d, rdata);
+//    basic_write(8'h1d, 'h9911);
+//    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_write)
+//    inject_wait_states(11);
+//    basic_write(8'h40, 'h9911);
+//    basic_write(8'h44, 'hx);
+//    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_read)
+//    set_slave_data(8'h1d, 32'h5a5a_5a5a);
+//    inject_wait_states(11);
+//    do_a_basic_read(8'h1d, rdata);
+//    do_a_basic_read(8'h1d, ignore);
+//    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
+//  `SMOKETEST_END
+//
+//
+//  //--------------------------------------
+//  // Pipelined NONSEQ write w/wait states
+//  //--------------------------------------
+//
+//  `SMOKETEST(first_pipelined_NONSEQ_write_transition_scheduled_first)
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_address_phase();
+//    `FAIL_UNLESS(haddr_eq('h1));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(second_pipelined_NONSEQ_write_transition_scheduled_second)
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_address_phase(1);
+//    `FAIL_UNLESS(haddr_eq('h2));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(pipelined_NONSEQ_write_first_of_extended_address_phase_with_wait_states)
+//    inject_wait_states(3);
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_address_phase(1);
+//    `FAIL_UNLESS(haddr_eq('h2));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(pipelined_NONSEQ_write_last_of_extended_address_phase_with_wait_states)
+//    inject_wait_states(3);
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_address_phase(4);
+//    `FAIL_UNLESS(haddr_eq('h2));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(pipelined_NONSEQ_write_with_wait_states_transitions_to_IDLE)
+//    inject_wait_states(3);
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_address_phase(5);
+//    `FAIL_UNLESS(haddr_eq('hx));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(first_pipelined_NONSEQ_write_n_to_addr)
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_wdata_phase(0);
+//    `FAIL_UNLESS(slave_data_eq(1,1));
+//  `SMOKETEST_END
+//
+//  `SMOKETEST(second_pipelined_NONSEQ_write_n_to_addr)
+//uut.verbose = 1;
+//    fork
+//      begin
+//        pipelined_write('h1, 'h1);
+//        pipelined_write('h2, 'h2);
+//      end
+//    join_none
+//    then_at_wdata_phase(1);
+//    `FAIL_UNLESS(slave_data_eq(2,2));
+//  `SMOKETEST_END
 
 // `SMOKETEST(pipelined_NONSEQ_write_transitions_extend_address_phase_during_wait_state)
 //   pipelined_write('h1, 'hx);

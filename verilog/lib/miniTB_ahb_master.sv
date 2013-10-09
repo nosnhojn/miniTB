@@ -33,18 +33,30 @@ interface minitb_ahb_master
 //logic                 hlockx;
 //
 logic                 hready;
+logic                 hready_d1;
 //logic [1:0]           hresp;
 //
 logic [1:0]           htrans;
+logic [1:0]           htrans_d1;
+logic [1:0]           m_trans [$];
 
 logic [addrWidth-1:0] haddr;
+logic [addrWidth-1:0] haddr_d1;
+logic [addrWidth-1:0] m_addr [$];
 logic                 hwrite;
+logic                 hwrite_d1;
+logic                 m_write [$];
 //logic [2:0]           hsize;
 //logic [2:0]           hburst;
 //logic [3:0]           hprot;
 //
 logic [dataWidth-1:0] hwdata;
+logic [dataWidth-1:0] next_hwdata;
+logic [dataWidth-1:0] m_wdata [$];
+
 logic [dataWidth-1:0] hrdata;
+logic [dataWidth-1:0] rdata;
+event rdata_e;
 
 parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
@@ -80,22 +92,6 @@ endtask
 //
 task automatic pipelined_write(logic [addrWidth-1:0] addr,
                                logic [dataWidth-1:0] data);
-  if (addr_phase) begin
-    @(negedge addr_phase);
-    fork
-      basic_write(addr,data,1);
-    join_none
-  end
-
-  else begin
-    fork
-      basic_write(addr,data,1);
-    join_none
-  end
-
-  // the context swith is here so that consecutive
-  // pipelined_writes are scheduled in order
-  #0;
 endtask
 
 
@@ -103,44 +99,13 @@ endtask
 // basic_write
 //
 task automatic basic_write(logic [addrWidth-1:0] addr,
-                           logic [dataWidth-1:0] data,
-                           logic                 st_flag = 0);
-  // address phase
-  addr_phase = 1;
-  if (!data_phase) begin
-    @(negedge hclk);
-    hwdata = 'hx;
-  end
-  haddr = addr;
-  htrans = NONSEQ;
-  hwrite = 1;
+                           logic [dataWidth-1:0] data);
+  m_write.push_back(1);
+  m_addr.push_back(addr);
+  m_wdata.push_back(data);
+  m_trans.push_back(NONSEQ);
 
-  if (st_flag) begin
-    while (!hready) begin
-      @(negedge hclk);
-    end
-  end
-
-  // data phase
   @(negedge hclk);
-  haddr = 'hx;
-  htrans = IDLE;
-  hwrite = 'hx;
-  hwdata = data;
-  data_phase = 1;
-  addr_phase = 0;
-
-  while (!hready) begin
-    @(negedge hclk);
-  end
-
-  fork
-    #0 data_phase = 0;
-    if (!addr_phase) begin
-      @(negedge hclk);
-      hwdata = 'hx;
-    end
-  join_none
 endtask
 
 
@@ -149,27 +114,55 @@ endtask
 //
 task automatic basic_read(logic [addrWidth-1:0] addr,
                           ref logic [dataWidth-1:0] data);
-  // address phase
-  if (!data_phase) @(negedge hclk);
-  haddr = addr;
-  htrans = NONSEQ;
-  hwrite = 0;
+  m_write.push_back(0);
+  m_addr.push_back(addr);
+  m_wdata.push_back('hx);
+  m_trans.push_back(NONSEQ);
 
-  // sample hrdata during the data phase
-  @(negedge hclk);
-  haddr = 'hx;
-  htrans = 0;
-  hwrite = 'hx;
-  data_phase = 1;
-
-  while (!hready) begin
-    @(negedge hclk);
-  end
-  data = hrdata;
-
-  fork
-    #0 data_phase = 0;
-  join_none
+  @(rdata_e) data = rdata;
 endtask
+
+logic address_phase;
+always @(negedge hclk) begin
+  hwdata <= next_hwdata;
+  hready_d1 <= hready;
+
+  if (address_phase) begin
+    haddr_d1 <= haddr;
+    hwrite_d1 <= hwrite;
+    htrans_d1 <= htrans;
+  end
+
+  if (m_addr.size() > 0) begin
+    address_phase <= 1;
+    haddr <= m_addr.pop_front();
+    hwrite <= m_write.pop_front();
+    htrans <= m_trans.pop_front();
+    next_hwdata <= m_wdata.pop_front();
+  end
+
+  else begin
+    address_phase <= 0;
+    htrans <= 'h0;
+    haddr <= 'hx;
+    hwrite <= 'hx;
+    if (hready) begin
+      next_hwdata <= 'hx;
+    end
+  end
+end
+
+always @(posedge hclk) begin
+  #1;
+  if (htrans == NONSEQ && !hwrite && hready) begin
+    rdata = hrdata;
+    -> rdata_e;
+  end
+
+  else if (htrans_d1 == NONSEQ && !hwrite_d1 && hready && !hready_d1) begin
+    rdata = hrdata;
+    -> rdata_e;
+  end
+end
 
 endinterface

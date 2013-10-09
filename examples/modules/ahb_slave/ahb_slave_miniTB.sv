@@ -382,6 +382,15 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(hwdata_eq('hff));
   `SMOKETEST_END
 
+  `SMOKETEST(NONSEQ_write_transitions_to_IDLE_during_wait_state)
+    fork_a_basic_write('h1, 'hx);
+    with_wait_state(1);
+    then_at_wdata_phase(0);
+    `FAIL_UNLESS(htrans_eq(0));
+    `FAIL_UNLESS(haddr_eq('hx));
+    `FAIL_UNLESS(hwrite_eq('hx));
+  `SMOKETEST_END
+
   `SMOKETEST(NONSEQ_wdata_ignored_in_wait_state)
     fork_a_basic_write(8'hfc, 32'hff);
     with_wait_state(1);
@@ -586,6 +595,12 @@ module ahb_slave_miniTB;
     do_a_basic_read(8'h1d, ignore);
     `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
   `SMOKETEST_END
+
+
+  //--------------------------------------
+  // Pipelined NONSEQ write w/wait states
+  //--------------------------------------
+
 
   // incremental bursts of various length
 

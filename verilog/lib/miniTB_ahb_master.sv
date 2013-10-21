@@ -136,6 +136,10 @@ always @(negedge hclk) begin
 
     'b10 :
       begin
+        htrans_d1 <= htrans;
+        haddr_d1 <= haddr;
+        hwrite_d1 <= hwrite;
+
         if (m_addr.size() > 0) begin
           address_phase <= 1;
           haddr <= m_addr.pop_front();

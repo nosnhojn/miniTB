@@ -55,10 +55,13 @@ logic [dataWidth-1:0] mem [memDepth];
 logic [addrWidth-1:0] haddr_ap;
 logic                 hwrite_ap;
 logic [1:0]           htrans_ap;
-logic                 hready_d1;
 
 
 bit verbose = 0;
+always @(posedge hclk) begin
+  #1; if (verbose) $display("%t - hready:%0x htrans:%0x hwrite:%0x haddr:0x%0x hwdata:0x%0x hrdata:0x%0x", $time, hready, htrans, hwrite, haddr, hwdata, hrdata);
+end
+
 always @(posedge hclk or negedge hresetn) begin
   if (!hresetn) begin
     hrdata    <= 0;
@@ -66,22 +69,26 @@ always @(posedge hclk or negedge hresetn) begin
     hwrite_ap <= 0;
     haddr_ap  <= 0;
     hready    <= 1;
-    hready_d1 <= 1;
   end
 
   else begin
-    if (verbose) $display("%t - hready:%0x htrans:%0x hwrite:%0x haddr:0x%0x hwdata:0x%0x hrdata:0x%0x", $time, hready, htrans, hwrite, haddr, hwdata, hrdata);
-
     hready <= ~slv_busy;
-    hready_d1 <= hready;
-    if (hready) begin
+    if (htrans == NONSEQ) begin
       htrans_ap <= htrans;
       hwrite_ap <= hwrite;
       haddr_ap  <= haddr;
     end
 
+    else begin
+      if (!slv_busy) begin
+        htrans_ap <= 0;
+        hwrite_ap <= 0;
+        haddr_ap  <= 0;
+      end
+    end
+
     // nonseq writes
-    if (htrans_ap == NONSEQ && hwrite_ap && hready) begin
+    if (htrans_ap == NONSEQ && hwrite_ap && !slv_busy) begin
       mem[haddr_ap] <= hwdata;
     end
 

@@ -62,7 +62,7 @@ parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
 
 logic data_phase = 0;
-logic addr_phase = 0;
+logic address_phase = 0;
 
 //
 // reset
@@ -73,7 +73,7 @@ function void reset();
   hwrite = 'hx;
   hwdata = 'hx;
   data_phase = 0;
-  addr_phase = 0;
+  address_phase = 0;
 endfunction
 
 
@@ -105,7 +105,7 @@ task automatic basic_write(logic [addrWidth-1:0] addr,
   m_wdata.push_back(data);
   m_trans.push_back(NONSEQ);
 
-  @(negedge hclk);
+  @(posedge hclk);
 endtask
 
 
@@ -116,44 +116,87 @@ task automatic basic_read(logic [addrWidth-1:0] addr,
                           ref logic [dataWidth-1:0] data);
   m_write.push_back(0);
   m_addr.push_back(addr);
-  m_wdata.push_back('hx);
   m_trans.push_back(NONSEQ);
 
   @(rdata_e) data = rdata;
 endtask
 
-logic address_phase;
 always @(negedge hclk) begin
-  hwdata <= next_hwdata;
-  hready_d1 <= hready;
+  case ({address_phase , data_phase})
+    'b00 :
+      begin
+        if (m_addr.size() > 0) begin
+          address_phase <= 1;
+          haddr <= m_addr.pop_front();
+          htrans <= m_trans.pop_front();
+          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          hwrite <= m_write.pop_front();
+        end
+      end
 
-  if (address_phase) begin
-    haddr_d1 <= haddr;
-    hwrite_d1 <= hwrite;
-    htrans_d1 <= htrans;
-  end
+    'b10 :
+      begin
+        if (m_addr.size() > 0) begin
+          address_phase <= 1;
+          haddr <= m_addr.pop_front();
+          htrans <= m_trans.pop_front();
+          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          hwrite <= m_write.pop_front();
+        end
 
-  if (m_addr.size() > 0) begin
-    address_phase <= 1;
-    haddr <= m_addr.pop_front();
-    hwrite <= m_write.pop_front();
-    htrans <= m_trans.pop_front();
-    next_hwdata <= m_wdata.pop_front();
-  end
+        else begin
+          address_phase <= 0;
+          htrans <= 'h0;
+          haddr <= 'hx;
+          hwrite <= 'hx;
+        end
 
-  else begin
-    address_phase <= 0;
-    htrans <= 'h0;
-    haddr <= 'hx;
-    hwrite <= 'hx;
-    if (hready) begin
-      next_hwdata <= 'hx;
-    end
-  end
+        data_phase <= 1;
+        hwdata <= next_hwdata;
+      end
+
+    'b11 :
+      begin
+        if (m_addr.size() > 0) begin
+          address_phase <= 1;
+          haddr <= m_addr.pop_front();
+          htrans <= m_trans.pop_front();
+          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          hwrite <= m_write.pop_front();
+        end
+
+        else begin
+          address_phase <= 0;
+          htrans <= 'h0;
+          haddr <= 'hx;
+          hwrite <= 'hx;
+        end
+
+        data_phase <= 1;
+        hwdata <= next_hwdata;
+      end
+
+    'b01 :
+      begin
+        if (m_addr.size() > 0) begin
+          address_phase <= 1;
+          haddr <= m_addr.pop_front();
+          htrans <= m_trans.pop_front();
+          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          hwrite <= m_write.pop_front();
+        end
+
+        if (hready) begin
+          data_phase <= 0;
+          hwdata <= 'hx;
+        end
+      end
+  endcase
 end
 
 always @(posedge hclk) begin
   #1;
+  hready_d1 <= hready;
   if (htrans == NONSEQ && !hwrite && hready) begin
     rdata = hrdata;
     -> rdata_e;

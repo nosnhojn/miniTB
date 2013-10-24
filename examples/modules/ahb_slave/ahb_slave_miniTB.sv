@@ -587,33 +587,38 @@ module ahb_slave_miniTB;
      `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
    `SMOKETEST_END
  
-//  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_write)
-//    fail_on_timeout(15);
-//    set_slave_data(8'h1d, 32'h5a5a_5a5a);
-//    inject_wait_states(0, 11);
-//    fork
-//      #0 basic_write(8'h1e, 'h9911);
-//    join_none
-//    do_a_basic_read(8'h1d, rdata);
-//    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_write)
-//    inject_wait_states(11);
-//    basic_write(8'h40, 'h9911);
-//    basic_write(8'h44, 'hx);
-//    `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_read)
-//    set_slave_data(8'h1d, 32'h5a5a_5a5a);
-//    inject_wait_states(11);
-//    do_a_basic_read(8'h1d, rdata);
-//    do_a_basic_read(8'h1d, ignore);
-//    `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
-//  `SMOKETEST_END
-//
-//
+   `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_write)
+     fail_on_timeout(15);
+     set_slave_data(8'h1d, 32'h5a5a_5a5a);
+     inject_wait_states(0, 11);
+     fork
+       #0 basic_write(8'h1e, 'h9911);
+     join_none
+     do_a_basic_read(8'h1d, rdata);
+     `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(NONSEQ_write_with_several_wait_states_not_disrupted_by_write)
+     inject_wait_states(1, 11);
+     fork
+       basic_write(8'h40, 'h9911);
+       #0 basic_write(8'h44, 'hx);
+     join_none
+     then_at_wdata_phase(11);
+     `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(NONSEQ_read_with_several_wait_states_not_disrupted_by_read)
+     set_slave_data(8'h1d, 32'h5a5a_5a5a);
+     inject_wait_states(11);
+     fork
+       #0 do_a_basic_read(8'h4d, ignore);
+     join_none
+     do_a_basic_read(8'h1d, rdata);
+     `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
+   `SMOKETEST_END
+
+
 //  //--------------------------------------
 //  // Pipelined NONSEQ write w/wait states
 //  //--------------------------------------

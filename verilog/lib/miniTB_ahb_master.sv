@@ -37,14 +37,13 @@ logic                 hready_d1;
 //logic [1:0]           hresp;
 //
 logic [1:0]           htrans;
-logic [1:0]           htrans_d1;
+logic [1:0]           htrans_ap;
 logic [1:0]           m_trans [$];
 
 logic [addrWidth-1:0] haddr;
-logic [addrWidth-1:0] haddr_d1;
 logic [addrWidth-1:0] m_addr [$];
 logic                 hwrite;
-logic                 hwrite_d1;
+logic                 hwrite_ap;
 logic                 m_write [$];
 //logic [2:0]           hsize;
 //logic [2:0]           hburst;
@@ -136,9 +135,10 @@ always @(negedge hclk) begin
 
     'b10 :
       begin
-        htrans_d1 <= htrans;
-        haddr_d1 <= haddr;
-        hwrite_d1 <= hwrite;
+        if (!hwrite) begin
+          htrans_ap <= htrans;
+          hwrite_ap <= hwrite;
+        end
 
         if (m_addr.size() > 0) begin
           address_phase <= 1;
@@ -161,9 +161,10 @@ always @(negedge hclk) begin
 
     'b11 :
       begin
-        htrans_d1 <= htrans;
-        haddr_d1 <= haddr;
-        hwrite_d1 <= hwrite;
+        if (!hwrite) begin
+          htrans_ap <= htrans;
+          hwrite_ap <= hwrite;
+        end
 
         if (m_addr.size() > 0) begin
           address_phase <= 1;
@@ -214,7 +215,7 @@ always @(posedge hclk) begin
     -> rdata_e;
   end
 
-  else if (htrans_d1 == NONSEQ && !hwrite_d1 && hready && !hready_d1) begin
+  else if (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1) begin
     rdata = hrdata;
     -> rdata_e;
   end

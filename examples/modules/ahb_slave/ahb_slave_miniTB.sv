@@ -539,9 +539,11 @@ module ahb_slave_miniTB;
  
    `SMOKETEST(NONSEQ_write_with_wait_state_not_disrupted_by_read)
      inject_wait_states(1, 1);
-     basic_write(8'h40, 'h9911);
-     do_a_basic_read(8'h44, rdata);
-     at_sample_edge(5);
+     fork
+       basic_write(8'h40, 'h9911);
+       #0 do_a_basic_read(8'h44, rdata);
+     join_none
+     then_at_wdata_phase(1);
      `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
    `SMOKETEST_END
  
@@ -549,12 +551,9 @@ module ahb_slave_miniTB;
      set_slave_data(8'h1d, 32'h5a5a_5a5a);
      inject_wait_states(0, 1);
      fork
-       do_a_basic_read(8'h1d, rdata);
-       begin
-         #0 basic_write(8'h2d, 'h9911);
-       end
+       #0 basic_write(8'h2d, 'h9911);
      join_none
-     then_at_rdata_phase(2);
+     do_a_basic_read(8'h1d, rdata);
      `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
    `SMOKETEST_END
  
@@ -562,11 +561,9 @@ module ahb_slave_miniTB;
      inject_wait_states(1, 1);
      fork
        basic_write(8'h40, 'h9911);
-       begin
-         #0 basic_write(8'h44, 'hx);
-       end
+       #0 basic_write(8'h44, 'hx);
      join_none
-     at_sample_edge(5);
+     then_at_wdata_phase(1);
      `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
    `SMOKETEST_END
  
@@ -574,12 +571,9 @@ module ahb_slave_miniTB;
      set_slave_data(8'h1d, 32'h5a5a_5a5a);
      inject_wait_states(0,1);
      fork
-       do_a_basic_read(8'h1d, rdata);
-       begin
-         #0 do_a_basic_read(8'h2d, ignore);
-       end
+       #0 do_a_basic_read(8'h2d, ignore);
      join_none
-     then_at_rdata_phase(2);
+     do_a_basic_read(8'h1d, rdata);
      `FAIL_UNLESS(rdata_eq(32'h5a5a_5a5a));
    `SMOKETEST_END
  
@@ -587,11 +581,9 @@ module ahb_slave_miniTB;
      inject_wait_states(1, 11);
      fork
        basic_write(8'h40, 'h9911);
-       begin
-         #0 do_a_basic_read(8'h41, rdata);
-       end
+       #0 do_a_basic_read(8'h41, rdata);
      join_none
-     then_at_wdata_phase(12);
+     then_at_wdata_phase(11);
      `FAIL_UNLESS(slave_data_eq(8'h40, 'h9911));
    `SMOKETEST_END
  

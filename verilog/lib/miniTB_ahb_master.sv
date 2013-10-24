@@ -87,14 +87,6 @@ endtask
 
 
 //
-// pipelined_write
-//
-task automatic pipelined_write(logic [addrWidth-1:0] addr,
-                               logic [dataWidth-1:0] data);
-endtask
-
-
-//
 // basic_write
 //
 task automatic basic_write(logic [addrWidth-1:0] addr,
@@ -175,12 +167,12 @@ always @(negedge hclk) begin
         end
 
         else begin
-          //if (hready) begin
+          if (hready) begin
             address_phase <= 0;
             htrans <= 'h0;
             haddr <= 'hx;
             hwrite <= 'hx;
-          //end
+          end
         end
 
         data_phase <= 1;

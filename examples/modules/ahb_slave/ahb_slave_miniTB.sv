@@ -619,101 +619,85 @@ module ahb_slave_miniTB;
    `SMOKETEST_END
 
 
-//  //--------------------------------------
-//  // Pipelined NONSEQ write w/wait states
-//  //--------------------------------------
-//
-//  `SMOKETEST(first_pipelined_NONSEQ_write_transition_scheduled_first)
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_address_phase();
-//    `FAIL_UNLESS(haddr_eq('h1));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(second_pipelined_NONSEQ_write_transition_scheduled_second)
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_address_phase(1);
-//    `FAIL_UNLESS(haddr_eq('h2));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(pipelined_NONSEQ_write_first_of_extended_address_phase_with_wait_states)
-//    inject_wait_states(3);
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_address_phase(1);
-//    `FAIL_UNLESS(haddr_eq('h2));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(pipelined_NONSEQ_write_last_of_extended_address_phase_with_wait_states)
-//    inject_wait_states(3);
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_address_phase(4);
-//    `FAIL_UNLESS(haddr_eq('h2));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(pipelined_NONSEQ_write_with_wait_states_transitions_to_IDLE)
-//    inject_wait_states(3);
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_address_phase(5);
-//    `FAIL_UNLESS(haddr_eq('hx));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(first_pipelined_NONSEQ_write_n_to_addr)
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_wdata_phase(0);
-//    `FAIL_UNLESS(slave_data_eq(1,1));
-//  `SMOKETEST_END
-//
-//  `SMOKETEST(second_pipelined_NONSEQ_write_n_to_addr)
-//uut.verbose = 1;
-//    fork
-//      begin
-//        pipelined_write('h1, 'h1);
-//        pipelined_write('h2, 'h2);
-//      end
-//    join_none
-//    then_at_wdata_phase(1);
-//    `FAIL_UNLESS(slave_data_eq(2,2));
-//  `SMOKETEST_END
-
-// `SMOKETEST(pipelined_NONSEQ_write_transitions_extend_address_phase_during_wait_state)
-//   pipelined_write('h1, 'hx);
-//   pipelined_write('h2, 'hx);
-//   inject_wait_states(1);
-//   then_at_wdata_phase(0);
-//   `FAIL_UNLESS(htrans_eq(0));
-//   `FAIL_UNLESS(haddr_eq(uut.NONSEQ));
-//   `FAIL_UNLESS(hwrite_eq('h1));
-// `SMOKETEST_END
-
+   //--------------------------------------
+   // Pipelined NONSEQ write w/wait states
+   //--------------------------------------
+ 
+   `SMOKETEST(first_pipelined_NONSEQ_write_transition_scheduled_first)
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_address_phase();
+     `FAIL_UNLESS(haddr_eq('h1));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(second_pipelined_NONSEQ_write_transition_scheduled_second)
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_address_phase(1);
+     `FAIL_UNLESS(haddr_eq('h2));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(pipelined_NONSEQ_write_first_of_extended_address_phase_with_wait_states)
+     inject_wait_states(1, 3);
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_address_phase(1);
+     `FAIL_UNLESS(haddr_eq('h2) && htrans_eq(uut.NONSEQ) && hwrite_eq('h1));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(pipelined_NONSEQ_write_last_of_extended_address_phase_with_wait_states)
+     inject_wait_states(1, 3);
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_address_phase(4);
+     `FAIL_UNLESS(haddr_eq('h2) && htrans_eq(uut.NONSEQ) && hwrite_eq('h1));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(pipelined_NONSEQ_write_with_wait_states_transitions_to_IDLE)
+     inject_wait_states(3);
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_address_phase(5);
+     `FAIL_UNLESS(haddr_eq('hx));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(first_pipelined_NONSEQ_write_n_to_addr)
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_wdata_phase(0);
+     `FAIL_UNLESS(slave_data_eq(1,1));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(second_pipelined_NONSEQ_write_n_to_addr)
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+     join_none
+     then_at_wdata_phase(1);
+     `FAIL_UNLESS(slave_data_eq(2,2));
+   `SMOKETEST_END
+ 
+   `SMOKETEST(third_pipelined_NONSEQ_write_n_to_addr)
+     fork
+       basic_write('h1, 'h1);
+       #0 basic_write('h2, 'h2);
+       #1 basic_write('h3, 'h3);
+     join_none
+     then_at_wdata_phase(3);
+     `FAIL_UNLESS(slave_data_eq(3,3));
+   `SMOKETEST_END
 
   // incremental bursts of various length
 
@@ -738,11 +722,6 @@ task single_idle_trans();
   fork
     mst.idle();
   join_none
-endtask
-
-task pipelined_write(logic [31:0] addr,
-                     logic [31:0] data);
-  mst.pipelined_write(addr, data);
 endtask
 
 task fork_a_basic_write(logic [31:0] addr,

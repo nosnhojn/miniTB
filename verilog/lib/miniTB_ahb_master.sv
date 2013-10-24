@@ -161,6 +161,10 @@ always @(negedge hclk) begin
 
     'b11 :
       begin
+        htrans_d1 <= htrans;
+        haddr_d1 <= haddr;
+        hwrite_d1 <= hwrite;
+
         if (m_addr.size() > 0) begin
           address_phase <= 1;
           haddr <= m_addr.pop_front();
@@ -170,14 +174,18 @@ always @(negedge hclk) begin
         end
 
         else begin
-          address_phase <= 0;
-          htrans <= 'h0;
-          haddr <= 'hx;
-          hwrite <= 'hx;
+          //if (hready) begin
+            address_phase <= 0;
+            htrans <= 'h0;
+            haddr <= 'hx;
+            hwrite <= 'hx;
+          //end
         end
 
         data_phase <= 1;
-        hwdata <= next_hwdata;
+        if (hready) begin
+          hwdata <= next_hwdata;
+        end
       end
 
     'b01 :

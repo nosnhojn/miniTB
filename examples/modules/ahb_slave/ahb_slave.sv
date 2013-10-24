@@ -73,7 +73,14 @@ always @(posedge hclk or negedge hresetn) begin
 
   else begin
     hready <= ~slv_busy;
-    if (htrans == NONSEQ) begin
+    if (htrans == NONSEQ && !hwrite && !slv_busy) begin
+      htrans_ap <= 0;
+      hwrite_ap <= 0;
+      haddr_ap  <= 0;
+    end
+
+    else if (htrans == NONSEQ && !(htrans_ap == NONSEQ && slv_busy))
+    begin
       htrans_ap <= htrans;
       hwrite_ap <= hwrite;
       haddr_ap  <= haddr;
@@ -93,12 +100,12 @@ always @(posedge hclk or negedge hresetn) begin
     end
 
     // nonseq reads
-    if (htrans == NONSEQ && !hwrite && !slv_busy) begin
-      hrdata <= mem[haddr];
+    if (htrans_ap == NONSEQ && !hwrite_ap && (!slv_busy)) begin
+      hrdata <= mem[haddr_ap];
     end
 
-    else if (htrans_ap == NONSEQ && !hwrite_ap && (!slv_busy && !hready)) begin
-      hrdata <= mem[haddr_ap];
+    else if (htrans == NONSEQ && !hwrite && !slv_busy) begin
+      hrdata <= mem[haddr];
     end
 
     else begin

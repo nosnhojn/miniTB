@@ -335,6 +335,42 @@ module ahb_slave_miniTB;
     `FAIL_UNLESS(rdata_eq('hd0));
   `SMOKETEST_END
 
+  `SMOKETEST(_back2back2back_NONSEQ_writes_then_read_hwdata_inactive_for_read)
+    fork
+      begin
+        basic_write('h8, 'h55);
+        basic_write('h8, 'h55);
+        do_a_basic_read('h8, rdata);
+      end
+    join_none
+    then_at_wdata_phase(2);
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(_consecutive_NONSEQ_write_then_read_with_1_cycle_inbetween_hwdata_inactive_for_read)
+    fork
+      begin
+        basic_write('h8, 'h55);
+        @(negedge clk);
+        do_a_basic_read('h8, rdata);
+      end
+    join_none
+    then_at_wdata_phase(2);
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
+
+  `SMOKETEST(_consecutive_NONSEQ_write_then_read_with_2_cycles_inbetween_hwdata_inactive_for_read)
+    fork
+      begin
+        basic_write('h8, 'h55);
+        repeat (2) @(negedge clk);
+        do_a_basic_read('h8, rdata);
+      end
+    join_none
+    then_at_wdata_phase(3);
+    `FAIL_UNLESS(hwdata_eq('hx));
+  `SMOKETEST_END
+
 
   //--------------------------------------------
   // combined IDLE/NONSEQ write/ready transfers

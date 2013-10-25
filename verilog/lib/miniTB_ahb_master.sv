@@ -121,6 +121,7 @@ always @(negedge hclk) begin
           haddr <= m_addr.pop_front();
           htrans <= m_trans.pop_front();
           if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          else                 next_hwdata <= 'hx;
           hwrite <= m_write.pop_front();
         end
       end
@@ -137,6 +138,7 @@ always @(negedge hclk) begin
           haddr <= m_addr.pop_front();
           htrans <= m_trans.pop_front();
           if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          else                 next_hwdata <= 'hx;
           hwrite <= m_write.pop_front();
         end
 
@@ -163,6 +165,7 @@ always @(negedge hclk) begin
           haddr <= m_addr.pop_front();
           htrans <= m_trans.pop_front();
           if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          else                 next_hwdata <= 'hx;
           hwrite <= m_write.pop_front();
         end
 
@@ -188,6 +191,7 @@ always @(negedge hclk) begin
           haddr <= m_addr.pop_front();
           htrans <= m_trans.pop_front();
           if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+          else                 next_hwdata <= 'hx;
           hwrite <= m_write.pop_front();
         end
 

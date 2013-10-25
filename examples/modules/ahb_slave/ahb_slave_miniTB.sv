@@ -362,29 +362,25 @@ module ahb_slave_miniTB;
   //-----------------------------------
 
   `SMOKETEST(NONSEQ_slave_not_ready_in_wait_state)
-    fork_a_basic_write(8'h0, 32'h0);
-    slave_busy();
+    write_with_wait_state(8'h0, 32'h0, 1);
     then_at_wdata_phase(0);
     `FAIL_UNLESS(hready_eq(0));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_slave_ready_after_wait_state)
-    fork_a_basic_write(8'h0, 32'h0);
-    inject_wait_states(1, 1);
+    write_with_wait_state(8'h0, 32'h0, 1);
     then_at_wdata_phase(1);
     `FAIL_UNLESS(hready_eq(1));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_active_in_wait_state)
-    fork_a_basic_write(8'hfc, 32'hff);
-    inject_wait_states(1, 1);
+    write_with_wait_state(8'hfc, 32'hff, 1);
     then_at_wdata_phase(0);
     `FAIL_UNLESS(hwdata_eq('hff));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_write_transitions_to_IDLE_during_wait_state)
-    fork_a_basic_write('h1, 'hx);
-    inject_wait_states(1, 1);
+    write_with_wait_state('h1, 'hx, 1);
     then_at_wdata_phase(0);
     `FAIL_UNLESS(htrans_eq(0));
     `FAIL_UNLESS(haddr_eq('hx));
@@ -392,57 +388,49 @@ module ahb_slave_miniTB;
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_ignored_in_wait_state)
-    fork_a_basic_write(8'hfc, 32'hff);
-    inject_wait_states(1, 1);
+    write_with_wait_state(8'hfc, 32'hff, 1);
     then_at_wdata_phase(0);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
   `SMOKETEST_END
 
   `SMOKETEST(NONSEQ_wdata_flopped_after_wait_state)
-    fork_a_basic_write(8'hfc, 32'hff);
-    inject_wait_states(1, 1);
+    write_with_wait_state(8'hfc, 32'hff, 1);
     then_at_wdata_phase(1);
     `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
   `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_wait_state)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 1);
+     write_with_wait_state(8'hfc, 32'hff, 1);
      then_at_wdata_phase(2);
      `FAIL_UNLESS(hwdata_eq('hx));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_active_on_first_of_several_wait_states)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 8);
+     write_with_wait_state(8'hfc, 32'hff, 8);
      then_at_wdata_phase(1);
      `FAIL_UNLESS(hwdata_eq('hff));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_active_on_last_of_several_wait_states)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 8);
+     write_with_wait_state(8'hfc, 32'hff, 8);
      then_at_wdata_phase(7);
      `FAIL_UNLESS(hwdata_eq('hff));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_ignored_during_several_wait_states)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 8);
+     write_with_wait_state(8'hfc, 32'hff, 8);
      then_at_wdata_phase(7);
      `FAIL_UNLESS(slave_data_eq('hfc, 'hx));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_flopped_after_several_wait_states)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 8);
+     write_with_wait_state(8'hfc, 32'hff, 8);
      then_at_wdata_phase(8);
      `FAIL_UNLESS(slave_data_eq('hfc, 'hff));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_wdata_inactive_after_write_with_several_wait_states)
-     fork_a_basic_write(8'hfc, 32'hff);
-     inject_wait_states(1, 10);
+     write_with_wait_state(8'hfc, 32'hff, 10);
      then_at_wdata_phase(11);
      `FAIL_UNLESS(hwdata_eq('hx));
    `SMOKETEST_END
@@ -454,31 +442,27 @@ module ahb_slave_miniTB;
  
    `SMOKETEST(NONSEQ_rdata_inactive_in_wait_state)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 1);
+     read_with_wait_state(8'hf8, rdata, 1);
      then_at_rdata_phase(0);
      `FAIL_UNLESS(hrdata_eq('h0));
    `SMOKETEST_END
   
   `SMOKETEST(NONSEQ_rdata_active_after_wait_state)
     set_slave_data('hf8, 'hdfe);
-    fork_a_basic_read(8'hf8, rdata);
-    inject_wait_states(0, 1);
+    read_with_wait_state(8'hf8, rdata, 1);
     then_at_rdata_phase(1);
     `FAIL_UNLESS(hrdata_eq('hdfe));
   `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_rdata_inactive_after_read_with_wait_state)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 1);
+     read_with_wait_state(8'hf8, rdata, 1);
      then_at_rdata_phase(2);
      `FAIL_UNLESS(hrdata_eq('h0));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_read_transitions_to_IDLE_during_wait_state)
-     fork_a_basic_read('hx, rdata);
-     inject_wait_states(0, 1);
+     read_with_wait_state('hx, rdata, 1);
      then_at_rdata_phase(1);
      `FAIL_UNLESS(htrans_eq(0));
      `FAIL_UNLESS(haddr_eq('hx));
@@ -487,32 +471,28 @@ module ahb_slave_miniTB;
  
    `SMOKETEST(NONSEQ_rdata_inactive_on_first_of_several_wait_states)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 9);
+     read_with_wait_state(8'hf8, rdata, 9);
      then_at_rdata_phase(1);
      `FAIL_UNLESS(hrdata_eq('h0));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_rdata_active_on_last_of_several_wait_states)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 9);
+     read_with_wait_state(8'hf8, rdata, 9);
      then_at_rdata_phase(9);
      `FAIL_UNLESS(hrdata_eq('hdfe));
    `SMOKETEST_END
   
    `SMOKETEST(NONSEQ_rdata_ignored_during_several_wait_states)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 9);
+     read_with_wait_state(8'hf8, rdata, 9);
      then_at_rdata_phase(8);
      `FAIL_UNLESS(hrdata_eq('h0));
    `SMOKETEST_END
  
    `SMOKETEST(NONSEQ_rdata_inactive_after_write_with_several_wait_states)
      set_slave_data('hf8, 'hdfe);
-     fork_a_basic_read(8'hf8, rdata);
-     inject_wait_states(0, 9);
+     read_with_wait_state(8'hf8, rdata, 9);
      then_at_rdata_phase(10);
      `FAIL_UNLESS(hrdata_eq('h0));
    `SMOKETEST_END
@@ -706,6 +686,26 @@ module ahb_slave_miniTB;
   // other burst types
 
   `SMOKE_TESTS_END
+
+task write_with_wait_state(logic [31:0] addr,
+                           logic [31:0] data,
+                           int wait_states);
+  fork_a_basic_write(addr, data);
+  if (wait_states > 0) begin
+    inject_wait_states(1, wait_states);
+  end
+endtask
+
+
+task automatic read_with_wait_state(logic [31:0] addr = 0,
+                                    ref logic [31:0] rd,
+                                    input int wait_states);
+  if (wait_states > 0) begin
+    inject_wait_states(0, wait_states);
+  end
+  fork_a_basic_read(8'hf8, rdata);
+endtask
+
 
 task fail_on_timeout(int num_cycles);
   bit timeout = 1;

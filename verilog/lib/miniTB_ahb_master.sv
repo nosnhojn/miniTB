@@ -25,7 +25,8 @@ interface minitb_ahb_master
   dataWidth = 32
 )
 (
-  input hclk
+  input hclk,
+  input hresetn
 );
 
 //logic                 hgrantx;
@@ -55,17 +56,23 @@ logic [dataWidth-1:0] m_wdata [$];
 
 logic [dataWidth-1:0] hrdata;
 logic [dataWidth-1:0] rdata;
+
+int next_completion_id;
+int completion_id;
 event rdata_e;
 
 parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
 
+wire m_active;
 logic data_phase = 0;
 logic address_phase = 0;
 
 //
 // reset
 //
+
+assign m_active = hresetn;
 function void reset();
   htrans = IDLE;
   haddr  = 'hx;
@@ -73,6 +80,8 @@ function void reset();
   hwdata = 'hx;
   data_phase = 0;
   address_phase = 0;
+  next_completion_id = 0;
+  completion_id = 0;
 endfunction
 
 
@@ -105,12 +114,24 @@ endtask
 //
 task automatic basic_read(logic [addrWidth-1:0] addr,
                           ref logic [dataWidth-1:0] data);
+  int my_completion_id;
+
+  next_completion_id += 1;
+  my_completion_id = next_completion_id;
+
   m_write.push_back(0);
   m_addr.push_back(addr);
   m_trans.push_back(NONSEQ);
 
-  @(rdata_e) data = rdata;
+  @(rdata_e);
+  while (my_completion_id != completion_id) begin
+    @(rdata_e);
+  end
+
+  data = rdata;
 endtask
+
+always @(negedge hresetn) reset();
 
 always @(negedge hclk) begin
   case ({address_phase , data_phase})
@@ -160,26 +181,25 @@ always @(negedge hclk) begin
           hwrite_ap <= hwrite;
         end
 
-        if (m_addr.size() > 0) begin
-          address_phase <= 1;
-          haddr <= m_addr.pop_front();
-          htrans <= m_trans.pop_front();
-          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
-          else                 next_hwdata <= 'hx;
-          hwrite <= m_write.pop_front();
-        end
-
-        else begin
-          if (hready) begin
-            address_phase <= 0;
-            htrans <= 'h0;
-            haddr <= 'hx;
-            hwrite <= 'hx;
-          end
-        end
-
-        data_phase <= 1;
         if (hready) begin
+          if (m_addr.size() > 0) begin
+            address_phase <= 1;
+            haddr <= m_addr.pop_front();
+            htrans <= m_trans.pop_front();
+            if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+            else                 next_hwdata <= 'hx;
+            hwrite <= m_write.pop_front();
+          end
+
+          else begin
+            if (hready) begin
+              address_phase <= 0;
+              htrans <= 'h0;
+              haddr <= 'hx;
+              hwrite <= 'hx;
+            end
+          end
+
           hwdata <= next_hwdata;
         end
       end
@@ -204,16 +224,20 @@ always @(negedge hclk) begin
 end
 
 always @(posedge hclk) begin
-  #1;
-  hready_d1 <= hready;
-  if (htrans == NONSEQ && !hwrite && hready) begin
-    rdata = hrdata;
-    -> rdata_e;
-  end
+  if (m_active) begin
+    #1;
+    hready_d1 <= hready;
+    if (htrans == NONSEQ && !hwrite && hready) begin
+      rdata = hrdata;
+      completion_id += 1;
+      -> rdata_e;
+    end
 
-  else if (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1) begin
-    rdata = hrdata;
-    -> rdata_e;
+    else if (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1) begin
+      rdata = hrdata;
+      completion_id += 1;
+      -> rdata_e;
+    end
   end
 end
 

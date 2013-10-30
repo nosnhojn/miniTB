@@ -64,15 +64,25 @@ event rdata_e;
 parameter IDLE   = 2'b00,
           NONSEQ = 2'b10;
 
-wire m_active;
 logic data_phase = 0;
 logic address_phase = 0;
+
+wire slave_is_ready;
+wire new_xaction_ready;
+wire read_in_progress;
+
+
+//---------------------------
+// Public API
+//  reset();
+//  idle();
+//  basic_write(addr, data);
+//  basic_read(addr, data);
+//---------------------------
 
 //
 // reset
 //
-
-assign m_active = hresetn;
 function void reset();
   htrans = IDLE;
   haddr  = 'hx;
@@ -131,114 +141,116 @@ task automatic basic_read(logic [addrWidth-1:0] addr,
   data = rdata;
 endtask
 
+
+ 
+wire active;
+wire read_data_ready;
+wire read_without_wait;
+wire read_with_wait;
+
 always @(negedge hresetn) reset();
 
+//
+// Signal Mastering
+//
 always @(negedge hclk) begin
   case ({address_phase , data_phase})
     'b00 :
       begin
-        if (m_addr.size() > 0) begin
-          address_phase <= 1;
-          haddr <= m_addr.pop_front();
-          htrans <= m_trans.pop_front();
-          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
-          else                 next_hwdata <= 'hx;
-          hwrite <= m_write.pop_front();
-        end
+        if (new_xaction_ready) start_address_phase();
       end
 
     'b10 :
       begin
-        if (!hwrite) begin
-          htrans_ap <= htrans;
-          hwrite_ap <= hwrite;
-        end
+        if (new_xaction_ready) start_address_phase();
+        else                   end_address_phase();
 
-        if (m_addr.size() > 0) begin
-          address_phase <= 1;
-          haddr <= m_addr.pop_front();
-          htrans <= m_trans.pop_front();
-          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
-          else                 next_hwdata <= 'hx;
-          hwrite <= m_write.pop_front();
-        end
+        start_data_phase();
 
-        else begin
-          address_phase <= 0;
-          htrans <= 'h0;
-          haddr <= 'hx;
-          hwrite <= 'hx;
-        end
-
-        data_phase <= 1;
-        hwdata <= next_hwdata;
+        if (read_in_progress) remember_read_phase();
       end
 
     'b11 :
       begin
-        if (!hwrite) begin
-          htrans_ap <= htrans;
-          hwrite_ap <= hwrite;
+        if (slave_is_ready) begin
+          if (new_xaction_ready) start_address_phase();
+          else                   end_address_phase();
+
+          start_data_phase();
         end
 
-        if (hready) begin
-          if (m_addr.size() > 0) begin
-            address_phase <= 1;
-            haddr <= m_addr.pop_front();
-            htrans <= m_trans.pop_front();
-            if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
-            else                 next_hwdata <= 'hx;
-            hwrite <= m_write.pop_front();
-          end
-
-          else begin
-            if (hready) begin
-              address_phase <= 0;
-              htrans <= 'h0;
-              haddr <= 'hx;
-              hwrite <= 'hx;
-            end
-          end
-
-          hwdata <= next_hwdata;
-        end
+        if (read_in_progress) remember_read_phase();
       end
 
     'b01 :
       begin
-        if (m_addr.size() > 0) begin
-          address_phase <= 1;
-          haddr <= m_addr.pop_front();
-          htrans <= m_trans.pop_front();
-          if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
-          else                 next_hwdata <= 'hx;
-          hwrite <= m_write.pop_front();
-        end
+        if (new_xaction_ready) start_address_phase();
 
-        if (hready) begin
-          data_phase <= 0;
-          hwdata <= 'hx;
-        end
+        if (slave_is_ready) end_data_phase();
       end
   endcase
 end
 
+//
+// Signal Sampling
+//
 always @(posedge hclk) begin
-  if (m_active) begin
-    #1;
+  #1;
+  if (active) begin
     hready_d1 <= hready;
-    if (htrans == NONSEQ && !hwrite && hready) begin
-      rdata = hrdata;
-      completion_id += 1;
-      -> rdata_e;
-    end
-
-    else if (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1) begin
-      rdata = hrdata;
-      completion_id += 1;
-      -> rdata_e;
-    end
+    if (read_data_ready) return_read();
   end
 end
+
+
+//------------------------------------
+// tasks/wires for managing the logic
+// for the address and data phases
+//------------------------------------
+
+assign active = hresetn;
+assign slave_is_ready = hready;
+assign new_xaction_ready = (m_addr.size() > 0);
+assign read_in_progress = !hwrite;
+assign read_without_wait = (htrans == NONSEQ && !hwrite && hready);
+assign read_with_wait = (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1);
+assign read_data_ready = (read_without_wait || read_with_wait);
+
+function bit return_read();
+  rdata = hrdata;
+  completion_id += 1;
+  -> rdata_e;
+endfunction
+
+function void remember_read_phase();
+  htrans_ap <= htrans;
+  hwrite_ap <= hwrite;
+endfunction
+
+task start_address_phase();
+  address_phase <= 1;
+  haddr <= m_addr.pop_front();
+  htrans <= m_trans.pop_front();
+  if (m_write[0] == 1) next_hwdata <= m_wdata.pop_front();
+  else                 next_hwdata <= 'hx;
+  hwrite <= m_write.pop_front();
+endtask
+
+task end_address_phase();
+  address_phase <= 0;
+  htrans <= 'h0;
+  haddr <= 'hx;
+  hwrite <= 'hx;
+endtask
+
+task start_data_phase();
+  data_phase <= 1;
+  hwdata <= next_hwdata;
+endtask
+
+task end_data_phase();
+  data_phase <= 0;
+  hwdata <= 'hx;
+endtask
 
 endinterface

@@ -148,65 +148,37 @@ wire read_data_ready;
 wire read_without_wait;
 wire read_with_wait;
 
+wire the_bus_is_idle;
+wire the_address_phase_is_active;
+wire the_address_and_data_phases_are_active;
+wire the_data_phase_is_active;
+
+
+//
+// Bus Reset
+//
 always @(negedge hresetn) reset();
 
 //
 // Signal Mastering
 //
-always @(negedge hclk) begin
-  case ({address_phase , data_phase})
-    'b00 :
-      begin
-        if (new_xaction_ready) start_address_phase();
-      end
-
-    'b10 :
-      begin
-        if (new_xaction_ready) start_address_phase();
-        else                   end_address_phase();
-
-        start_data_phase();
-
-        if (read_in_progress) remember_read_phase();
-      end
-
-    'b11 :
-      begin
-        if (slave_is_ready) begin
-          if (new_xaction_ready) start_address_phase();
-          else                   end_address_phase();
-
-          start_data_phase();
-        end
-
-        if (read_in_progress) remember_read_phase();
-      end
-
-    'b01 :
-      begin
-        if (new_xaction_ready) start_address_phase();
-
-        if (slave_is_ready) end_data_phase();
-      end
-  endcase
-end
+always @(negedge hclk) drive_xactions();
 
 //
 // Signal Sampling
 //
-always @(posedge hclk) begin
-  #1;
-  if (active) begin
-    hready_d1 <= hready;
-    if (read_data_ready) return_read();
-  end
-end
+always @(posedge hclk) sample_read_data();
 
 
 //------------------------------------
 // tasks/wires for managing the logic
 // for the address and data phases
 //------------------------------------
+
+assign the_bus_is_idle = !(address_phase || data_phase);
+assign the_address_phase_is_active = (address_phase && !data_phase);
+assign the_address_and_data_phases_are_active = (address_phase && data_phase);
+assign the_data_phase_is_active = (!address_phase && data_phase);
 
 assign active = hresetn;
 assign slave_is_ready = hready;
@@ -215,6 +187,46 @@ assign read_in_progress = !hwrite;
 assign read_without_wait = (htrans == NONSEQ && !hwrite && hready);
 assign read_with_wait = (htrans_ap == NONSEQ && !hwrite_ap && hready && !hready_d1);
 assign read_data_ready = (read_without_wait || read_with_wait);
+
+function void drive_xactions();
+  if (the_bus_is_idle) begin
+    if (new_xaction_ready) start_address_phase();
+  end
+
+  else if (the_address_phase_is_active) begin
+    if (new_xaction_ready) start_address_phase();
+    else                   end_address_phase();
+
+    start_data_phase();
+
+    if (read_in_progress) remember_read_phase();
+  end
+
+  else if (the_address_and_data_phases_are_active) begin
+    if (slave_is_ready) begin
+      if (new_xaction_ready) start_address_phase();
+      else                   end_address_phase();
+
+      start_data_phase();
+    end
+
+    if (read_in_progress) remember_read_phase();
+  end
+
+  else if (the_data_phase_is_active) begin
+    if (new_xaction_ready) start_address_phase();
+
+    if (slave_is_ready) end_data_phase();
+  end
+endfunction
+
+task sample_read_data();
+  #1;
+  if (active) begin
+    hready_d1 <= hready;
+    if (read_data_ready) return_read();
+  end
+endtask
 
 function bit return_read();
   rdata = hrdata;
